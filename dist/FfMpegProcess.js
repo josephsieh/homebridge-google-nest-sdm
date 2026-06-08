@@ -4,6 +4,7 @@ exports.FfmpegProcess = void 0;
 const child_process_1 = require("child_process");
 const stream_1 = require("stream");
 class FfmpegProcess {
+    process;
     constructor(cameraName, sessionId, ffmpegArgs, stdin, log, debug, delegate, callback) {
         let pathToFfmpeg = require('ffmpeg-for-homebridge');
         if (!pathToFfmpeg)

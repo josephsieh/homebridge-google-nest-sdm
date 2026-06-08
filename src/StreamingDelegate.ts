@@ -18,7 +18,7 @@ import {
   StreamRequestCallback,
   StreamRequestTypes, VideoInfo
 } from 'homebridge';
-import { VideoCodecType } from 'hap-nodejs'
+import { VideoCodecType } from '@homebridge/hap-nodejs'
 import {createSocket, Socket} from 'dgram';
 import os from 'os';
 import {networkInterfaceDefault} from 'systeminformation';
@@ -261,7 +261,7 @@ export abstract class StreamingDelegate<T extends CameraController> implements C
     };
 
     const response: PrepareStreamResponse = {
-      address: currentAddress,
+      addressOverride: currentAddress,
       video: {
         port: videoReturnPort,
         ssrc: videoSSRC,

@@ -5,8 +5,18 @@ const child_process_1 = require("child_process");
 const net_1 = require("net");
 const stream_1 = require("stream");
 class HksvStreamer {
+    server;
+    ffmpegPath;
+    args;
+    nestStream;
+    debugMode;
+    log;
+    socket;
+    childProcess;
+    destroyed = false;
+    connectPromise;
+    connectResolve;
     constructor(log, nestStream, audioOutputArgs, videoOutputArgs, debugMode) {
-        this.destroyed = false;
         this.nestStream = nestStream;
         this.debugMode = debugMode;
         this.log = log;
@@ -31,7 +41,6 @@ class HksvStreamer {
         return stream;
     }
     async start() {
-        var _a, _b;
         this.log.debug('HksvStreamer start command received.');
         const promise = (0, events_1.once)(this.server, "listening");
         this.server.listen(); // listen on random port
@@ -59,28 +68,25 @@ class HksvStreamer {
             }
         }
         if (this.debugMode) {
-            (_a = this.childProcess.stdout) === null || _a === void 0 ? void 0 : _a.on("data", data => this.log.debug(data.toString()));
-            (_b = this.childProcess.stderr) === null || _b === void 0 ? void 0 : _b.on("data", data => this.log.debug(data.toString()));
+            this.childProcess.stdout?.on("data", data => this.log.debug(data.toString()));
+            this.childProcess.stderr?.on("data", data => this.log.debug(data.toString()));
         }
     }
     destroy() {
-        var _a;
         this.log.debug('HksvStreamer destroy command received, ending process.');
-        (_a = this.childProcess) === null || _a === void 0 ? void 0 : _a.kill();
+        this.childProcess?.kill();
         this.childProcess = undefined;
         this.destroyed = true;
     }
     handleDisconnect() {
-        var _a;
         this.log.debug('Socket destroyed.');
-        (_a = this.socket) === null || _a === void 0 ? void 0 : _a.destroy();
+        this.socket?.destroy();
         this.socket = undefined;
     }
     handleConnection(socket) {
-        var _a;
         this.server.close(); // don't accept any further clients
         this.socket = socket;
-        (_a = this.connectResolve) === null || _a === void 0 ? void 0 : _a.call(this);
+        this.connectResolve?.();
     }
     /**
      * Generator for `MP4Atom`s.
@@ -118,9 +124,8 @@ class HksvStreamer {
         }
         return new Promise((resolve, reject) => {
             const cleanup = () => {
-                var _a, _b;
-                (_a = this.socket) === null || _a === void 0 ? void 0 : _a.removeListener("readable", readHandler);
-                (_b = this.socket) === null || _b === void 0 ? void 0 : _b.removeListener("close", endHandler);
+                this.socket?.removeListener("readable", readHandler);
+                this.socket?.removeListener("close", endHandler);
             };
             const readHandler = () => {
                 const value = this.socket.read(length);

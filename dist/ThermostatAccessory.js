@@ -1,7 +1,11 @@
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
 }) : (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     o[k2] = m[k];
@@ -11,13 +15,23 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 }) : function(o, v) {
     o["default"] = v;
 });
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -28,9 +42,10 @@ const Traits = __importStar(require("./sdm/Traits"));
 const Traits_1 = require("./sdm/Traits");
 const Accessory_1 = require("./Accessory");
 class ThermostatAccessory extends Accessory_1.Accessory {
+    service;
     constructor(api, log, platform, accessory, device) {
         super(api, log, platform, accessory, device);
-        this.accessory.on("identify" /* IDENTIFY */, () => {
+        this.accessory.on("identify" /* PlatformAccessoryEvent.IDENTIFY */, () => {
             log.info("%s identified!", accessory.displayName);
         });
         // create a new Thermostat service
@@ -66,7 +81,6 @@ class ThermostatAccessory extends Accessory_1.Accessory {
         this.device.onEcoChanged = this.handleEcoUpdate.bind(this);
     }
     async setupEvents() {
-        var _a;
         this.service.getCharacteristic(this.platform.Characteristic.CoolingThresholdTemperature).removeOnGet();
         this.service.getCharacteristic(this.platform.Characteristic.CoolingThresholdTemperature).removeOnSet();
         this.service.getCharacteristic(this.platform.Characteristic.HeatingThresholdTemperature).removeOnGet();
@@ -87,7 +101,7 @@ class ThermostatAccessory extends Accessory_1.Accessory {
             minGetTemp = -20;
             maxGetTemp = 60;
         }
-        if (((_a = (await this.device.getEco())) === null || _a === void 0 ? void 0 : _a.mode) !== Traits_1.EcoModeType.OFF) {
+        if ((await this.device.getEco())?.mode !== Traits_1.EcoModeType.OFF) {
             if (tempUnits == Traits_1.TemperatureScale.FAHRENHEIT) {
                 minSetTemp = this.fahrenheitToCelsius(40);
             }
@@ -105,9 +119,9 @@ class ThermostatAccessory extends Accessory_1.Accessory {
         const targetMode = await this.device.getMode();
         this.service.getCharacteristic(this.platform.Characteristic.TargetHeatingCoolingState)
             .setProps({
-            validValues: lodash_1.default.map(targetMode === null || targetMode === void 0 ? void 0 : targetMode.availableModes, (availableMode) => this.convertThermostatModeType(availableMode))
+            validValues: lodash_1.default.map(targetMode?.availableModes, (availableMode) => this.convertThermostatModeType(availableMode))
         });
-        switch (targetMode === null || targetMode === void 0 ? void 0 : targetMode.mode) {
+        switch (targetMode?.mode) {
             case Traits_1.ThermostatModeType.HEATCOOL:
                 this.service.getCharacteristic(this.platform.Characteristic.CoolingThresholdTemperature)
                     .onGet(this.handleCoolingThresholdTemperatureGet.bind(this))
@@ -216,7 +230,7 @@ class ThermostatAccessory extends Accessory_1.Accessory {
     async handleCurrentHeatingCoolingStateGet() {
         this.log.debug('Triggered GET CurrentHeatingCoolingState', this.accessory.displayName);
         let hvac = await this.device.getHvac();
-        return this.convertHvacStatusType(hvac === null || hvac === void 0 ? void 0 : hvac.status);
+        return this.convertHvacStatusType(hvac?.status);
     }
     convertHvacStatusType(mode) {
         switch (mode) {
@@ -234,12 +248,11 @@ class ThermostatAccessory extends Accessory_1.Accessory {
      * Handle requests to get the current value of the "Target Heating Cooling State" characteristic
      */
     async handleTargetHeatingCoolingStateGet() {
-        var _a;
         this.log.debug('Triggered GET TargetHeatingCoolingState', this.accessory.displayName);
-        if (((_a = (await this.device.getEco())) === null || _a === void 0 ? void 0 : _a.mode) !== Traits_1.EcoModeType.OFF)
+        if ((await this.device.getEco())?.mode !== Traits_1.EcoModeType.OFF)
             return this.platform.Characteristic.TargetHeatingCoolingState.OFF;
         let mode = await this.device.getMode();
-        return this.convertThermostatModeType(mode === null || mode === void 0 ? void 0 : mode.mode);
+        return this.convertThermostatModeType(mode?.mode);
     }
     convertThermostatModeType(mode) {
         switch (mode) {
@@ -311,12 +324,12 @@ class ThermostatAccessory extends Accessory_1.Accessory {
         this.log.debug('Triggered GET CoolingThresholdTemperature', this.accessory.displayName);
         const targetTemperatureRange = await this.device.getTargetTemperatureRange();
         const mode = await this.device.getMode();
-        switch (mode === null || mode === void 0 ? void 0 : mode.mode) {
+        switch (mode?.mode) {
             case Traits_1.ThermostatModeType.COOL:
             case Traits_1.ThermostatModeType.HEATCOOL:
-                return targetTemperatureRange === null || targetTemperatureRange === void 0 ? void 0 : targetTemperatureRange.cool;
+                return targetTemperatureRange?.cool;
             case Traits_1.ThermostatModeType.HEAT:
-                return (targetTemperatureRange === null || targetTemperatureRange === void 0 ? void 0 : targetTemperatureRange.heat) - 0.5;
+                return targetTemperatureRange?.heat - 0.5;
             default:
                 throw new Error('Cannot get "Cooling Threshold Temperature" when thermostat is off.');
         }
@@ -337,12 +350,12 @@ class ThermostatAccessory extends Accessory_1.Accessory {
         this.log.debug('Triggered GET HeatingThresholdTemperatureGet', this.accessory.displayName);
         const targetTemperatureRange = await this.device.getTargetTemperatureRange();
         const mode = await this.device.getMode();
-        switch (mode === null || mode === void 0 ? void 0 : mode.mode) {
+        switch (mode?.mode) {
             case Traits_1.ThermostatModeType.HEAT:
             case Traits_1.ThermostatModeType.HEATCOOL:
-                return targetTemperatureRange === null || targetTemperatureRange === void 0 ? void 0 : targetTemperatureRange.heat;
+                return targetTemperatureRange?.heat;
             case Traits_1.ThermostatModeType.COOL:
-                return (targetTemperatureRange === null || targetTemperatureRange === void 0 ? void 0 : targetTemperatureRange.cool) + 0.5;
+                return targetTemperatureRange?.cool + 0.5;
             default:
                 throw new Error('Cannot get "Heating Threshold Temperature" when thermostat is off.');
         }
@@ -368,7 +381,7 @@ class ThermostatAccessory extends Accessory_1.Accessory {
      */
     async handleEcoModeGet() {
         this.log.debug('Triggered GET EcoMode', this.accessory.displayName);
-        return await this.convertToNullable(this.device.getEco().then(eco => (eco === null || eco === void 0 ? void 0 : eco.mode) === Traits_1.EcoModeType.MANUAL_ECO));
+        return await this.convertToNullable(this.device.getEco().then(eco => eco?.mode === Traits_1.EcoModeType.MANUAL_ECO));
     }
     /**
      * Handle requests to set the "Eco" characteristic

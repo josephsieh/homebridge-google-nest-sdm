@@ -3,9 +3,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.MotionAccessory = void 0;
 const Accessory_1 = require("./Accessory");
 class MotionAccessory extends Accessory_1.Accessory {
+    motionService;
+    lastMotion;
+    motionDecay = 20000;
     constructor(api, log, platform, accessory, device) {
         super(api, log, platform, accessory, device);
-        this.motionDecay = 20000;
         //create a new Motion service
         this.motionService = accessory.getService(this.api.hap.Service.MotionSensor);
         if (!this.motionService) {

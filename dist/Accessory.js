@@ -2,6 +2,11 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Accessory = void 0;
 class Accessory {
+    api;
+    log;
+    platform;
+    accessory;
+    device;
     constructor(api, log, platform, accessory, device) {
         this.platform = platform;
         this.log = log;

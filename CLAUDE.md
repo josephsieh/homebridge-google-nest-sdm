@@ -11,7 +11,7 @@ npm run clean       # remove dist/
 
 There are no tests (`npm test` exits with an error). Node >= 18 required.
 
-TypeScript strict mode is on. Build output goes to `dist/`; `src/res/*.jpg` (snapshot placeholder images) are copied there by `copy-files`.
+TypeScript strict mode is on. Build output goes to `dist/`; `src/res/*.jpg` (snapshot placeholder images) are copied there by `copy-files`. Node >= 22 required (Homebridge 2.x).
 
 ## Architecture
 
