@@ -9,6 +9,9 @@ A Homebridge plugin for Google Nest devices that uses the [Google Smart Device M
 
 **Please read the [FAQ](https://github.com/potmat/homebridge-google-nest-sdm#faq) before creating an issue.** If you are having trouble with the setup process you can try reaching out to others in [Discussions](https://github.com/potmat/homebridge-google-nest-sdm/discussions), on [Discord](https://discord.gg/kqNCe2D), or [Reddit](https://www.reddit.com/r/homebridge/), some people there may be able to help.
 
+See [CHANGELOG.md](file:///Users/joseph/git/personal/homebridge-google-nest-sdm/CHANGELOG.md) for details on changes in each release.
+
+
 
 
 # Disclaimer

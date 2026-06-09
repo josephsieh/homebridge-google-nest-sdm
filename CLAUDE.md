@@ -13,6 +13,22 @@ There are no tests (`npm test` exits with an error). Node >= 18 required.
 
 TypeScript strict mode is on. Build output goes to `dist/`; `src/res/*.jpg` (snapshot placeholder images) are copied there by `copy-files`. Node >= 22 required (Homebridge 2.x).
 
+## Releases
+
+To release a new version:
+1. Increment the version in [package.json](file:///Users/joseph/git/personal/homebridge-google-nest-sdm/package.json).
+2. Document the changes in [CHANGELOG.md](file:///Users/joseph/git/personal/homebridge-google-nest-sdm/CHANGELOG.md).
+3. Commit and tag:
+   ```bash
+   git add package.json CHANGELOG.md
+   git commit -m "chore: bump version to <version>"
+   git tag v<version>
+   git push origin master --tags
+   ```
+4. Push tags to trigger the automated GitHub Release workflow.
+5. Publish to npm: `npm publish`
+
+
 ## Architecture
 
 This is a Homebridge dynamic platform plugin that bridges Google Nest devices to HomeKit via the [Google Smart Device Management (SDM) API](https://developers.google.com/nest/device-access).
