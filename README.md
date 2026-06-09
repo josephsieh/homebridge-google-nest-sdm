@@ -7,9 +7,9 @@
 
 A Homebridge plugin for Google Nest devices that uses the [Google Smart Device Management API](https://developers.google.com/nest/device-access). Supports Cameras, Doorbells, Displays, and Thermostats.  Supports HomeKit Secure Video (please read the section on HKSV below).
 
-**Please read the [FAQ](https://github.com/potmat/homebridge-google-nest-sdm#faq) before creating an issue.** If you are having trouble with the setup process you can try reaching out to others in [Discussions](https://github.com/potmat/homebridge-google-nest-sdm/discussions), on [Discord](https://discord.gg/kqNCe2D), or [Reddit](https://www.reddit.com/r/homebridge/), some people there may be able to help.
+**Please read the [FAQ](https://github.com/josephsieh/homebridge-google-nest-sdm#faq) before creating an issue.** If you are having trouble with the setup process you can try reaching out to others in [Discussions](https://github.com/josephsieh/homebridge-google-nest-sdm/discussions), on [Discord](https://discord.gg/kqNCe2D), or [Reddit](https://www.reddit.com/r/homebridge/), some people there may be able to help.
 
-See [CHANGELOG.md](file:///Users/joseph/git/personal/homebridge-google-nest-sdm/CHANGELOG.md) for details on changes in each release.
+See [CHANGELOG.md](CHANGELOG.md) for details on changes in each release.
 
 
 
@@ -20,9 +20,14 @@ This package is not affiliated with, provided, endorsed, or supported by Google 
 
 # Installation
 
-``npm install -g --unsafe-perm homebridge-google-nest-sdm``
+Note: The package has been published under the scoped name `@josephsjc/homebridge-google-nest-sdm`. If you are upgrading from the legacy unscoped package `homebridge-google-nest-sdm`, you should uninstall it first:
 
-Don't forget the ``--unsafe-perm`` part!
+```bash
+npm uninstall -g homebridge-google-nest-sdm
+npm install -g --unsafe-perm @josephsjc/homebridge-google-nest-sdm
+```
+
+Don't forget the `--unsafe-perm` part if your system configuration requires it! Note that the platform name in your config block remains `homebridge-google-nest-sdm`.
 
 # Example Homebridge config:
 
@@ -34,8 +39,8 @@ Don't forget the ``--unsafe-perm`` part!
         "refreshToken": "...",
         "subscriptionId": "...",
         "gcpProjectId": "<optional>",
-        "vEncoder": "<optional>"
-        "showFan": "<optional>"
+        "vEncoder": "<optional>",
+        "showFan": "<optional>",
         "fanDuration": "<optional>"
     }
 
@@ -57,9 +62,9 @@ Follow the getting started guide here: https://developers.google.com/nest/device
 
 **vEncoder** is optional.  It is the encoder the plugin will use for camera streams. If vEncoder is not specified it will default to "libx264 -preset ultrafast -tune zerolatency". You can use "copy" to not transcode streams at all, this will require almost no CPU, and seems to work fine on most devices, however it's not guaranteed to work in all scenarios. On a Raspberry Pi 4 you can try something like "h264_v4l2m2m".  On other platforms you are free to use the encoder of your choice.  If you don't know what this means you can probably ignore it.
 
-**showFan** is optional.  If true, a fan accessory will be added.
+**showFan** is optional. If true, a fan accessory using `Service.Fanv2` (with the `Active` and `CurrentFanState` characteristics) will be added for thermostats that support fan traits. This supports toggling the fan, animating the icon in the Home app, and automatic status synchronization.
 
-**fanDuration** is optional. You only need to use this if **showFan** is set to true. It controls the fan duration (in seconds) when turning on the fan.  Must be between 1 and 43200.  Defaults to 900 if not set.
+**fanDuration** is optional. You only need to use this if **showFan** is set to true. It controls the fan timer duration (in seconds) sent to the Nest SDM API when turning on the fan. Must be between 1 and 43200 (12 hours). Defaults to 900 (15 minutes) if not set.
 
 ONE IMPORTANT DIFFERENCE!
 
@@ -119,7 +124,7 @@ HomeKit Secure Video will require even more CPU power.  The clips need to be tra
 
 **Q**: My cameras only respond some of the time. Why?
 
-**A**: Much like the behaviour some of us have experienced in the Nest app, sometimes the API errors out for unknown reasons.  See also this [issue](https://github.com/potmat/homebridge-google-nest-sdm/issues/4).  I am doing my best to find out why the API fails so often.
+**A**: Much like the behaviour some of us have experienced in the Nest app, sometimes the API errors out for unknown reasons.  See also this [issue](https://github.com/josephsieh/homebridge-google-nest-sdm/issues/4).  I am doing my best to find out why the API fails so often.
 
 **Q**: My cameras stream stops responding after five minutes. Why?
 
@@ -127,15 +132,15 @@ HomeKit Secure Video will require even more CPU power.  The clips need to be tra
 
 **Q**: When the plugin starts I get some message about ```Plugin initialization failed, there was a failure with event subscription```.  Why?
 
-**A**: As the error message tells you, make sure you mind the ["ONE IMPORTANT DIFFERENCE"](https://github.com/potmat/homebridge-google-nest-sdm#where-do-the-config-values-come-from) when setting up your config values.  Try using the **gcpProjectId** config value if you continue to have problems.
+**A**: As the error message tells you, make sure you mind the ["ONE IMPORTANT DIFFERENCE"](https://github.com/josephsieh/homebridge-google-nest-sdm#where-do-the-config-values-come-from) when setting up your config values.  Try using the **gcpProjectId** config value if you continue to have problems.
 
 **Q**: My camera shows up as ```<null> Camera``` or ``` Camera``` without the room name or anything.  Why?
 
-**A**: This is actually a glitch on the Google side, see [this comment](https://github.com/potmat/homebridge-google-nest-sdm/issues/6#issuecomment-978088908).
+**A**: This is actually a glitch on the Google side, see [this comment](https://github.com/josephsieh/homebridge-google-nest-sdm/issues/6#issuecomment-978088908).
 
 **Q**: I'm having problems getting through the getting started guide and getting the config values. Can you help?
 
-**A**: Probably not.  Having a day job and family I don't have much time to help with this.  The Nest plugin for Home Assistant uses much the same process (don't forget the ["ONE IMPORTANT DIFFERENCE"](https://github.com/potmat/homebridge-google-nest-sdm#where-do-the-config-values-come-from) section above).  It has an [illustrated guide](https://www.home-assistant.io/integrations/nest/) that you may find helpful. You can also try reaching out to others in [Discussions](https://github.com/potmat/homebridge-google-nest-sdm/discussions), on [Discord](https://discord.gg/kqNCe2D), or [Reddit](https://www.reddit.com/r/homebridge/), some people there may be able to help.
+**A**: Probably not.  Having a day job and family I don't have much time to help with this.  The Nest plugin for Home Assistant uses much the same process (don't forget the ["ONE IMPORTANT DIFFERENCE"](https://github.com/josephsieh/homebridge-google-nest-sdm#where-do-the-config-values-come-from) section above).  It has an [illustrated guide](https://www.home-assistant.io/integrations/nest/) that you may find helpful. You can also try reaching out to others in [Discussions](https://github.com/josephsieh/homebridge-google-nest-sdm/discussions), on [Discord](https://discord.gg/kqNCe2D), or [Reddit](https://www.reddit.com/r/homebridge/), some people there may be able to help.
 
 **Q**: Do I really have to pay $5 to use the API?
 
@@ -151,6 +156,6 @@ HomeKit Secure Video will require even more CPU power.  The clips need to be tra
 
 **Q**: I just added a Nest device to my account, but it's not showing up in Home. Why?
 
-**A**: You need to visit the ["ONE IMPORTANT DIFFERENCE"](https://github.com/potmat/homebridge-google-nest-sdm#where-do-the-config-values-come-from) URL again.  Here you will choose which Nest devices to authorize, you should see your new device here.  After you finish the process and get a new refresh token restart Homebridge, your device should now be visible.
+**A**: You need to visit the ["ONE IMPORTANT DIFFERENCE"](https://github.com/josephsieh/homebridge-google-nest-sdm#where-do-the-config-values-come-from) URL again.  Here you will choose which Nest devices to authorize, you should see your new device here.  After you finish the process and get a new refresh token restart Homebridge, your device should now be visible.
 
 

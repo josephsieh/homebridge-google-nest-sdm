@@ -80,7 +80,7 @@ class SmartDeviceManagement {
             this.setupSubscription(config.subscriptionId);
         }
         catch (error) {
-            this.log.error("Plugin initialization failed, there was a failure with event subscription. Did you read the readme: https://github.com/potmat/homebridge-google-nest-sdm#where-do-the-config-values-come-from", error);
+            this.log.error("Plugin initialization failed, there was a failure with event subscription. Did you read the readme: https://github.com/josephsieh/homebridge-google-nest-sdm#where-do-the-config-values-come-from", error);
             this.subscribed = false;
         }
     }
@@ -117,7 +117,7 @@ class SmartDeviceManagement {
             this.handleReconnection(subscriptionId);
         });
         this.subscription.on('error', error => {
-            this.log.error("Plugin initialization failed, there was a failure with event subscription. Did you read the readme: https://github.com/potmat/homebridge-google-nest-sdm#where-do-the-config-values-come-from", error);
+            this.log.error("Plugin initialization failed, there was a failure with event subscription. Did you read the readme: https://github.com/josephsieh/homebridge-google-nest-sdm#where-do-the-config-values-come-from", error);
             this.handleReconnection(subscriptionId);
         });
     }

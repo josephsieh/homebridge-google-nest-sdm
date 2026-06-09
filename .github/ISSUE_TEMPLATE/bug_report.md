@@ -7,15 +7,15 @@ assignees: ''
 
 ---
 
-**Have you read the [FAQ](https://github.com/potmat/homebridge-google-nest-sdm#faq)?**
+**Have you read the [FAQ](https://github.com/josephsieh/homebridge-google-nest-sdm#faq)?**
 
 Yes/No
 
-**Have you searched [existing issues](https://github.com/potmat/homebridge-google-nest-sdm/issues?q=is%3Aissue)?**
+**Have you searched [existing issues](https://github.com/josephsieh/homebridge-google-nest-sdm/issues?q=is%3Aissue)?**
 
 Yes/No
 
-**Have you searched [existing discussions](https://github.com/potmat/homebridge-google-nest-sdm/discussions?discussions_q=)?**
+**Have you searched [existing discussions](https://github.com/josephsieh/homebridge-google-nest-sdm/discussions?discussions_q=)?**
 
 Yes/No
 
