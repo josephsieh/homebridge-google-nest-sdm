@@ -105,7 +105,16 @@ class StreamingDelegate {
     handleSnapshotRequest(request, callback) {
         this.camera.getSnapshot()
             .then(result => {
-            callback(undefined, result);
+            if (result === undefined) {
+                callback(new Error('getSnapshot returned undefined'));
+            }
+            else {
+                callback(undefined, result);
+            }
+        })
+            .catch(error => {
+            this.log.error('Failed to get snapshot: ', error.stack ?? error, this.camera.getDisplayName());
+            callback(error);
         });
     }
     static determineResolution(request) {

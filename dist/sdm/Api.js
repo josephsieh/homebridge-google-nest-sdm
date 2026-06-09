@@ -137,7 +137,7 @@ class SmartDeviceManagement {
                 .value();
         }
         catch (error) {
-            this.log.error('Could not execute device LIST request: ', JSON.stringify(error));
+            this.log.error('Could not execute device LIST request: ', error.stack ?? error);
         }
         return this.devices;
     }

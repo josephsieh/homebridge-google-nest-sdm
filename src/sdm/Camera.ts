@@ -74,7 +74,7 @@ export class Camera extends Device {
             this.image = Buffer.from(imageResponse.data, 'base64');
             setTimeout(() => this.image = null, 10000);
         } catch (error: any) {
-            this.log.error('Could not execute event image GET request: ', JSON.stringify(error), this.getDisplayName());
+            this.log.error('Could not execute event image GET request: ', error.stack ?? error, this.getDisplayName());
         }
     }
 

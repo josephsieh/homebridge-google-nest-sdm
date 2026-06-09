@@ -92,6 +92,7 @@ class Thermostat extends Device_1.Device {
                         const traitValue = value;
                         this.onFanChanged(traitValue);
                     }
+                    break;
                 case Traits.Constants.ThermostatHvac:
                     if (this.onHvacChanged) {
                         const traitValue = value;
@@ -204,15 +205,17 @@ class Thermostat extends Device_1.Device {
             case Traits.ThermostatModeType.HEAT:
                 if (!heat)
                     throw new Error('Cannot set a target temperature range (heat only) when the thermostat is not in heat mode.');
-                await this.executeCommand(Commands.Constants.ThermostatTemperatureSetpoint_SetRange, {
+                await this.executeCommand(Commands.Constants.ThermostatTemperatureSetpoint_SetHeat, {
                     heatCelsius: heat
                 });
+                break;
             case Traits.ThermostatModeType.COOL:
                 if (!cool)
                     throw new Error('Cannot set a target temperature range (cool only) when the thermostat is not in cool mode.');
-                await this.executeCommand(Commands.Constants.ThermostatTemperatureSetpoint_SetRange, {
+                await this.executeCommand(Commands.Constants.ThermostatTemperatureSetpoint_SetCool, {
                     coolCelsius: cool
                 });
+                break;
             case Traits.ThermostatModeType.OFF:
                 throw new Error('Cannot set a target temperature when the thermostat is off.');
         }

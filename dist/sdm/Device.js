@@ -40,7 +40,7 @@ class Device {
             this.lastRefresh = Date.now();
         }
         catch (error) {
-            this.log.error('Could not execute device GET request: ', JSON.stringify(error), this.getDisplayName());
+            this.log.error('Could not execute device GET request: ', error.stack ?? error, this.getDisplayName());
         }
     }
     async getTrait(name) {
@@ -69,7 +69,7 @@ class Device {
             return response.data.results;
         }
         catch (error) {
-            this.log.error('Could not execute device command: ', JSON.stringify(error), this.getDisplayName());
+            this.log.error('Could not execute device command: ', error.stack ?? error, this.getDisplayName());
         }
         return undefined;
     }
