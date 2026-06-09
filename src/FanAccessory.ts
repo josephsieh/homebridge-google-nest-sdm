@@ -37,6 +37,13 @@ export class FanAccessory extends Accessory<Thermostat> {
             .onGet(this.handleOnGet.bind(this))
             .onSet(this.handleOnSet.bind(this));
 
+        // Ensure CurrentFanState characteristic exists and is bound to handle status syncing.
+        let currentFanState = this.service.getCharacteristic(this.platform.Characteristic.CurrentFanState);
+        if (!currentFanState) {
+            currentFanState = this.service.addCharacteristic(this.platform.Characteristic.CurrentFanState);
+        }
+        currentFanState.onGet(this.handleCurrentFanStateGet.bind(this));
+
         this.device.onFanChanged = this.handleFanUpdate.bind(this);
     }
 
@@ -46,6 +53,11 @@ export class FanAccessory extends Accessory<Thermostat> {
             ? this.platform.Characteristic.Active.ACTIVE
             : this.platform.Characteristic.Active.INACTIVE;
         this.service.updateCharacteristic(this.platform.Characteristic.Active, active);
+
+        const currentState = fan.timerMode === FanTimerModeType.ON
+            ? this.platform.Characteristic.CurrentFanState.BLOWING_AIR
+            : this.platform.Characteristic.CurrentFanState.INACTIVE;
+        this.service.updateCharacteristic(this.platform.Characteristic.CurrentFanState, currentState);
     }
 
     /**
@@ -57,10 +69,21 @@ export class FanAccessory extends Accessory<Thermostat> {
         if (this.config.fanDuration && (this.config.fanDuration < 1 || this.config.fanDuration > 43200))
             throw new Error(`Cannot set "${this.config.fanDuration}" as fan duration.`);
 
-        const timerMode = value === this.platform.Characteristic.Active.ACTIVE
+        const timerMode = (value === this.platform.Characteristic.Active.ACTIVE || value === true || value === 1)
             ? Traits.FanTimerModeType.ON
             : FanTimerModeType.OFF;
         await this.device.setFan(timerMode, this.config.fanDuration);
+
+        // Update characteristics immediately to reflect the new state in UI
+        const active = timerMode === FanTimerModeType.ON
+            ? this.platform.Characteristic.Active.ACTIVE
+            : this.platform.Characteristic.Active.INACTIVE;
+        this.service.updateCharacteristic(this.platform.Characteristic.Active, active);
+
+        const currentState = timerMode === FanTimerModeType.ON
+            ? this.platform.Characteristic.CurrentFanState.BLOWING_AIR
+            : this.platform.Characteristic.CurrentFanState.INACTIVE;
+        this.service.updateCharacteristic(this.platform.Characteristic.CurrentFanState, currentState);
     }
 
     /**
@@ -73,5 +96,17 @@ export class FanAccessory extends Accessory<Thermostat> {
         return fan?.timerMode === FanTimerModeType.ON
             ? this.platform.Characteristic.Active.ACTIVE
             : this.platform.Characteristic.Active.INACTIVE;
+    }
+
+    /**
+     * Handle requests to get the current value of the "Current Fan State" characteristic
+     */
+    private async handleCurrentFanStateGet() {
+        this.log.debug('Triggered GET Fan Current State', this.accessory.displayName);
+
+        const fan = await this.device.getFan();
+        return fan?.timerMode === FanTimerModeType.ON
+            ? this.platform.Characteristic.CurrentFanState.BLOWING_AIR
+            : this.platform.Characteristic.CurrentFanState.INACTIVE;
     }
 }

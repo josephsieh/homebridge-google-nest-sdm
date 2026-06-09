@@ -24,7 +24,7 @@ export abstract class Device {
         if ((event as any).resourceUpdate && (event as any).resourceUpdate.traits) {
             const traitEvent = event as Events.ResourceTraitEvent;
             _.forEach(traitEvent.resourceUpdate.traits, (value, key) => {
-                if (this.device.traits && this.device.traits[key])
+                if (this.device.traits)
                     this.device.traits[key] = value;
             })
         }

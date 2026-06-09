@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [2.0.6] - 2026-06-09
+
+### Fixed
+- **Fan Accessory:** Fixed thermostat fan control issues where toggling the fan in Apple Home had no effect or failed to sync. Implemented robust truthy value mapping for `Active` characteristic setter, added `CurrentFanState` characteristic to support proper status sync and fan animations, and added immediate UI state updates after API commands.
+- **Event Sync:** Fixed a bug where incoming Pub/Sub event traits were ignored if they were not initially present in the device object at startup.
+
+---
 
 ## [2.0.5] - 2026-06-09
 

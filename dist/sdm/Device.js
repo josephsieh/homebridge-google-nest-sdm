@@ -23,7 +23,7 @@ class Device {
         if (event.resourceUpdate && event.resourceUpdate.traits) {
             const traitEvent = event;
             lodash_1.default.forEach(traitEvent.resourceUpdate.traits, (value, key) => {
-                if (this.device.traits && this.device.traits[key])
+                if (this.device.traits)
                     this.device.traits[key] = value;
             });
         }
