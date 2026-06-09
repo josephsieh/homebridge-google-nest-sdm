@@ -1,0 +1,10 @@
+node_modules/
+src/
+.claude/
+graphify-out/
+tsconfig.json
+CLAUDE.md
+.github/
+*.tgz
+*.tsbuildinfo
+*.log
