@@ -33,7 +33,7 @@ export class SmartDeviceManagement {
             refresh_token: config.refreshToken
         });
         this.smartdevicemanagement = new google.smartdevicemanagement_v1.Smartdevicemanagement({
-            auth: this.oauth2Client
+            auth: this.oauth2Client as any
         });
 
         try {
@@ -60,7 +60,7 @@ export class SmartDeviceManagement {
 
                 this.log.debug('Event received: ' + message.data.toString());
 
-                const event: Events.Event = JSON.parse(message.data);
+                const event: Events.Event = JSON.parse(message.data.toString());
 
                 // if ((event as Events.ResourceRelationEvent).relationUpdate) {
                 //     const resourceRelationtEvent = event as Events.ResourceRelationEvent;

@@ -28,7 +28,7 @@ import {Camera} from "./sdm/Camera";
 import {getStreamer, NestStream, NestStreamer} from "./NestStreamer";
 import {Platform} from "./Platform";
 import HksvStreamer from "./HksvStreamer";
-import pickPort, { pickPortOptions } from 'pick-port';
+import { pickPort } from 'pick-port';
 
 type SessionInfo = {
   address: string; // address of the HAP controller
@@ -237,8 +237,8 @@ export abstract class StreamingDelegate<T extends CameraController> implements C
 
     const ipv6 = request.addressVersion === 'ipv6';
 
-    const options: pickPortOptions = {
-      type: 'udp',
+    const options = {
+      type: 'udp' as const,
       ip: ipv6 ? '::' : '0.0.0.0',
       reserveTimeout: 15
     };

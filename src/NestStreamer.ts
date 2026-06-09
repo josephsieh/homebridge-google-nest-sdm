@@ -4,7 +4,7 @@ import {createSocket, Socket} from "dgram";
 import {RTCPeerConnection, RTCRtpCodecParameters} from "werift";
 import * as Traits from "./sdm/Traits";
 import {Logger} from "homebridge";
-import pickPort, { pickPortOptions } from 'pick-port';
+import { pickPort } from 'pick-port';
 
 export interface NestStream {
     args: string,
@@ -74,8 +74,8 @@ export class WebRtcNestStreamer extends NestStreamer {
             }
         });
 
-        const options: pickPortOptions = {
-          type: 'udp',
+        const options = {
+          type: 'udp' as const,
           ip: '0.0.0.0',
           reserveTimeout: 15
         };

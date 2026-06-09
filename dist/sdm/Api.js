@@ -85,7 +85,7 @@ class SmartDeviceManagement {
                 if (!this.devices)
                     return;
                 this.log.debug('Event received: ' + message.data.toString());
-                const event = JSON.parse(message.data);
+                const event = JSON.parse(message.data.toString());
                 // if ((event as Events.ResourceRelationEvent).relationUpdate) {
                 //     const resourceRelationtEvent = event as Events.ResourceRelationEvent;
                 // } else
