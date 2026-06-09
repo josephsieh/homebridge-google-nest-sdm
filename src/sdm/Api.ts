@@ -20,6 +20,8 @@ export class SmartDeviceManagement {
     private log: Logger;
     private devices: Device[] | undefined;
     private subscribed = true;
+    private reconnectTimeout: NodeJS.Timeout | undefined;
+    private reconnectAttempts = 0;
 
     constructor(config: Config, log: Logger) {
         this.log = log;
@@ -51,20 +53,28 @@ export class SmartDeviceManagement {
                     refresh_token: config.refreshToken
                 }
             });
-            this.subscription = this.pubSubClient.subscription(config.subscriptionId);
-            this.subscription.on('message', message => {
-                message.ack();
+            this.setupSubscription(config.subscriptionId);
+        } catch (error: any) {
+            this.log.error("Plugin initialization failed, there was a failure with event subscription. Did you read the readme: https://github.com/potmat/homebridge-google-nest-sdm#where-do-the-config-values-come-from", error);
+            this.subscribed = false;
+        }
+    }
 
-                if (!this.devices)
-                    return;
+    private setupSubscription(subscriptionId: string) {
+        if (!this.pubSubClient) return;
 
-                this.log.debug('Event received: ' + message.data.toString());
+        this.subscription = this.pubSubClient.subscription(subscriptionId);
+        this.subscription.on('message', message => {
+            message.ack();
 
+            if (!this.devices)
+                return;
+
+            this.log.debug('Event received: ' + message.data.toString());
+
+            try {
                 const event: Events.Event = JSON.parse(message.data.toString());
 
-                // if ((event as Events.ResourceRelationEvent).relationUpdate) {
-                //     const resourceRelationtEvent = event as Events.ResourceRelationEvent;
-                // } else
                 if ((event as Events.ResourceEventEvent).resourceUpdate.events) {
                     const resourceEventEvent = event as Events.ResourceEventEvent;
                     const device = _.find(this.devices, device => device.getName() === resourceEventEvent.resourceUpdate.name);
@@ -76,15 +86,52 @@ export class SmartDeviceManagement {
                     if (device)
                         device.event(resourceTraitEvent);
                 }
-            });
-            this.subscription.on('error', error => {
-                this.log.error("Plugin initialization failed, there was a failure with event subscription. Did you read the readme: https://github.com/potmat/homebridge-google-nest-sdm#where-do-the-config-values-come-from", error);
-                this.subscribed = false;
-            });
-        } catch (error: any) {
+            } catch (error: any) {
+                this.log.error('Failed to parse or process GCP Pub/Sub message: ', error.stack ?? error);
+            }
+        });
+
+        this.subscription.on('close', () => {
+            this.log.warn('GCP Pub/Sub subscription closed. Attempting to reconnect...');
+            this.handleReconnection(subscriptionId);
+        });
+
+        this.subscription.on('error', error => {
             this.log.error("Plugin initialization failed, there was a failure with event subscription. Did you read the readme: https://github.com/potmat/homebridge-google-nest-sdm#where-do-the-config-values-come-from", error);
-            this.subscribed = false;
+            this.handleReconnection(subscriptionId);
+        });
+    }
+
+    private handleReconnection(subscriptionId: string) {
+        this.subscribed = false;
+        if (this.reconnectTimeout) return;
+
+        // Clean up current subscription listeners
+        if (this.subscription) {
+            this.subscription.removeAllListeners('message');
+            this.subscription.removeAllListeners('error');
+            this.subscription.removeAllListeners('close');
+            try {
+                this.subscription.close();
+            } catch (err) {}
         }
+
+        const backoff = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 1000 * 60 * 5); // Max 5 mins
+        this.reconnectAttempts++;
+        this.log.info(`Reconnecting GCP Pub/Sub in ${backoff / 1000}s (attempt ${this.reconnectAttempts})...`);
+
+        this.reconnectTimeout = setTimeout(() => {
+            this.reconnectTimeout = undefined;
+            try {
+                this.setupSubscription(subscriptionId);
+                this.subscribed = true;
+                this.reconnectAttempts = 0;
+                this.log.info('Successfully reconnected to GCP Pub/Sub subscription.');
+            } catch (error: any) {
+                this.log.error('Reconnection to GCP Pub/Sub subscription failed: ', error.stack ?? error);
+                this.handleReconnection(subscriptionId);
+            }
+        }, backoff);
     }
 
     async list_devices(): Promise<Device[] | undefined> {

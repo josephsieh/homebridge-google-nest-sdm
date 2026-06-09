@@ -41,6 +41,7 @@ const lodash_1 = __importDefault(require("lodash"));
 const Traits = __importStar(require("./sdm/Traits"));
 const Traits_1 = require("./sdm/Traits");
 const Accessory_1 = require("./Accessory");
+const ThermostatUtils_1 = require("./ThermostatUtils");
 class ThermostatAccessory extends Accessory_1.Accessory {
     service;
     constructor(api, log, platform, accessory, device) {
@@ -87,27 +88,11 @@ class ThermostatAccessory extends Accessory_1.Accessory {
         this.service.getCharacteristic(this.platform.Characteristic.HeatingThresholdTemperature).removeOnSet();
         this.service.getCharacteristic(this.platform.Characteristic.TargetTemperature).removeOnGet();
         this.service.getCharacteristic(this.platform.Characteristic.TargetTemperature).removeOnSet();
-        let tempUnits = await this.device.getTemperatureUnits();
-        let minSetTemp, maxSetTemp, minGetTemp, maxGetTemp;
-        if (tempUnits == Traits_1.TemperatureScale.FAHRENHEIT) {
-            minSetTemp = this.fahrenheitToCelsius(50);
-            maxSetTemp = this.fahrenheitToCelsius(90);
-            minGetTemp = this.fahrenheitToCelsius(0);
-            maxGetTemp = this.fahrenheitToCelsius(160);
-        }
-        else {
-            minSetTemp = 9;
-            maxSetTemp = 32;
-            minGetTemp = -20;
-            maxGetTemp = 60;
-        }
-        if ((await this.device.getEco())?.mode !== Traits_1.EcoModeType.OFF) {
-            if (tempUnits == Traits_1.TemperatureScale.FAHRENHEIT) {
-                minSetTemp = this.fahrenheitToCelsius(40);
-            }
-            else {
-                minSetTemp = 4.5;
-            }
+        const tempUnits = await this.device.getTemperatureUnits();
+        const eco = await this.device.getEco();
+        const isEcoOn = eco?.mode !== Traits_1.EcoModeType.OFF;
+        const { minSetTemp, maxSetTemp, minGetTemp, maxGetTemp } = (0, ThermostatUtils_1.getTemperatureLimits)(tempUnits, isEcoOn);
+        if (isEcoOn) {
             this.service.getCharacteristic(this.platform.Characteristic.CoolingThresholdTemperature)
                 .onGet(this.handleCoolingThresholdTemperatureGet.bind(this));
             this.service.getCharacteristic(this.platform.Characteristic.HeatingThresholdTemperature)
@@ -119,7 +104,7 @@ class ThermostatAccessory extends Accessory_1.Accessory {
         const targetMode = await this.device.getMode();
         this.service.getCharacteristic(this.platform.Characteristic.TargetHeatingCoolingState)
             .setProps({
-            validValues: lodash_1.default.map(targetMode?.availableModes, (availableMode) => this.convertThermostatModeType(availableMode))
+            validValues: lodash_1.default.map(targetMode?.availableModes, (availableMode) => (0, ThermostatUtils_1.convertThermostatModeType)(availableMode, this.platform.Characteristic))
         });
         switch (targetMode?.mode) {
             case Traits_1.ThermostatModeType.HEATCOOL:
@@ -162,27 +147,13 @@ class ThermostatAccessory extends Accessory_1.Accessory {
             maxValue: maxSetTemp
         });
     }
-    fahrenheitToCelsius(temperature) {
-        return (temperature - 32) / 1.8;
-    }
-    ;
     handleCurrentTemperatureUpdate(temperature) {
         this.log.debug('Update CurrentTemperature:' + temperature, this.accessory.displayName);
         this.service.updateCharacteristic(this.platform.Characteristic.CurrentTemperature, temperature);
     }
-    convertTemperatureDisplayUnits(unit) {
-        switch (unit) {
-            case Traits_1.TemperatureScale.CELSIUS:
-                return this.platform.Characteristic.TemperatureDisplayUnits.CELSIUS;
-            case Traits_1.TemperatureScale.FAHRENHEIT:
-                return this.platform.Characteristic.TemperatureDisplayUnits.FAHRENHEIT;
-            default:
-                return null;
-        }
-    }
     handleTemperatureScaleUpdate(unit) {
         this.log.debug('Update TemperatureUnits:' + unit, this.accessory.displayName);
-        let converted = this.convertTemperatureDisplayUnits(unit);
+        let converted = (0, ThermostatUtils_1.convertTemperatureDisplayUnits)(unit, this.platform.Characteristic);
         if (converted !== null)
             this.service.updateCharacteristic(this.platform.Characteristic.TemperatureDisplayUnits, converted);
     }
@@ -203,14 +174,14 @@ class ThermostatAccessory extends Accessory_1.Accessory {
     }
     handleCurrentHeatingCoolingStateUpdate(status) {
         this.log.debug('Update CurrentHeatingCoolingState:' + status, this.accessory.displayName);
-        let converted = this.convertHvacStatusType(status);
+        let converted = (0, ThermostatUtils_1.convertHvacStatusType)(status, this.platform.Characteristic);
         if (converted !== null)
             this.service.updateCharacteristic(this.platform.Characteristic.CurrentHeatingCoolingState, converted);
     }
     handleTargetHeatingCoolingStateUpdate(status) {
         this.log.debug(`Update TargetHeatingCoolingState:${status}`, this.accessory.displayName);
         this.setupEvents();
-        let converted = this.convertThermostatModeType(status);
+        let converted = (0, ThermostatUtils_1.convertThermostatModeType)(status, this.platform.Characteristic);
         if (converted !== null)
             this.service.updateCharacteristic(this.platform.Characteristic.TargetHeatingCoolingState, converted);
     }
@@ -230,19 +201,7 @@ class ThermostatAccessory extends Accessory_1.Accessory {
     async handleCurrentHeatingCoolingStateGet() {
         this.log.debug('Triggered GET CurrentHeatingCoolingState', this.accessory.displayName);
         let hvac = await this.device.getHvac();
-        return this.convertHvacStatusType(hvac?.status);
-    }
-    convertHvacStatusType(mode) {
-        switch (mode) {
-            case Traits.HvacStatusType.HEATING:
-                return this.platform.Characteristic.CurrentHeatingCoolingState.HEAT;
-            case Traits.HvacStatusType.COOLING:
-                return this.platform.Characteristic.CurrentHeatingCoolingState.COOL;
-            case Traits.HvacStatusType.OFF:
-                return this.platform.Characteristic.CurrentHeatingCoolingState.OFF;
-            default:
-                return null;
-        }
+        return (0, ThermostatUtils_1.convertHvacStatusType)(hvac?.status, this.platform.Characteristic);
     }
     /**
      * Handle requests to get the current value of the "Target Heating Cooling State" characteristic
@@ -252,21 +211,7 @@ class ThermostatAccessory extends Accessory_1.Accessory {
         if ((await this.device.getEco())?.mode !== Traits_1.EcoModeType.OFF)
             return this.platform.Characteristic.TargetHeatingCoolingState.OFF;
         let mode = await this.device.getMode();
-        return this.convertThermostatModeType(mode?.mode);
-    }
-    convertThermostatModeType(mode) {
-        switch (mode) {
-            case Traits.ThermostatModeType.HEAT:
-                return this.platform.Characteristic.TargetHeatingCoolingState.HEAT;
-            case Traits.ThermostatModeType.COOL:
-                return this.platform.Characteristic.TargetHeatingCoolingState.COOL;
-            case Traits.ThermostatModeType.HEATCOOL:
-                return this.platform.Characteristic.TargetHeatingCoolingState.AUTO;
-            case Traits.ThermostatModeType.OFF:
-                return this.platform.Characteristic.TargetHeatingCoolingState.OFF;
-            default:
-                return null;
-        }
+        return (0, ThermostatUtils_1.convertThermostatModeType)(mode?.mode, this.platform.Characteristic);
     }
     /**
      * Handle requests to set the "Target Heating Cooling State" characteristic
@@ -374,7 +319,7 @@ class ThermostatAccessory extends Accessory_1.Accessory {
      */
     async handleTemperatureDisplayUnitsGet() {
         this.log.debug('Triggered GET TemperatureDisplayUnits', this.accessory.displayName);
-        return this.convertTemperatureDisplayUnits(await this.device.getTemperatureUnits());
+        return (0, ThermostatUtils_1.convertTemperatureDisplayUnits)(await this.device.getTemperatureUnits(), this.platform.Characteristic);
     }
     /**
      * Handle requests to get the current value of the "Eco" characteristic

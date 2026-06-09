@@ -46,8 +46,11 @@ const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const lodash_1 = __importDefault(require("lodash"));
 const Traits = __importStar(require("./Traits"));
+let cachedNestLogo = null;
+let cachedGoogleLogo = null;
 class Camera extends Device_1.Device {
     image = null;
+    imageTimeout = null;
     getDisplayName() {
         return this.displayName ? this.displayName + ' Camera' : 'Unknown';
     }
@@ -58,10 +61,18 @@ class Camera extends Device_1.Device {
         //Nest cams do not have any method to get a current snapshot,
         //starting streams up just to retrieve one is slow and will cause
         //the SDM API to hit a rate limit of creating too many streams
-        if ((await this.getVideoProtocol()) === Traits.ProtocolType.RTSP)
-            return await fs_1.default.promises.readFile(path_1.default.join(__dirname, "..", "res", "nest-logo.jpg"));
-        else
-            return await fs_1.default.promises.readFile(path_1.default.join(__dirname, "..", "res", "google-logo.jpg"));
+        if ((await this.getVideoProtocol()) === Traits.ProtocolType.RTSP) {
+            if (!cachedNestLogo) {
+                cachedNestLogo = await fs_1.default.promises.readFile(path_1.default.join(__dirname, "..", "res", "nest-logo.jpg"));
+            }
+            return cachedNestLogo;
+        }
+        else {
+            if (!cachedGoogleLogo) {
+                cachedGoogleLogo = await fs_1.default.promises.readFile(path_1.default.join(__dirname, "..", "res", "google-logo.jpg"));
+            }
+            return cachedGoogleLogo;
+        }
     }
     getResolutions() {
         return [
@@ -98,7 +109,13 @@ class Camera extends Device_1.Device {
                 responseEncoding: 'base64'
             });
             this.image = Buffer.from(imageResponse.data, 'base64');
-            setTimeout(() => this.image = null, 10000);
+            if (this.imageTimeout) {
+                clearTimeout(this.imageTimeout);
+            }
+            this.imageTimeout = setTimeout(() => {
+                this.image = null;
+                this.imageTimeout = null;
+            }, 300000); // Cache for 5 minutes instead of 10s
         }
         catch (error) {
             this.log.error('Could not execute event image GET request: ', error.stack ?? error, this.getDisplayName());

@@ -80,7 +80,15 @@ export class FfmpegProcess {
     }
 
     public stop(): void {
-        this.process.kill('SIGKILL');
+        this.process.kill('SIGTERM');
+        const killTimeout = setTimeout(() => {
+            if (this.process.exitCode === null && !this.process.killed) {
+                this.process.kill('SIGKILL');
+            }
+        }, 500);
+        this.process.once('exit', () => {
+            clearTimeout(killTimeout);
+        });
     }
 
     getStdin(): Writable | null {
