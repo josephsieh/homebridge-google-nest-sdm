@@ -4,7 +4,6 @@ import {FanTimerModeType} from './sdm/Traits';
 import {Platform} from './Platform';
 import {Thermostat} from "./sdm/Thermostat";
 import {Accessory} from "./Accessory";
-import _ from "lodash";
 import {Config} from "./Config";
 
 export class FanAccessory extends Accessory<Thermostat> {
@@ -26,13 +25,15 @@ export class FanAccessory extends Accessory<Thermostat> {
             log.info("%s fan identified!", accessory.displayName);
         });
 
-        // create a new Thermostat service
-        this.service = <Service>accessory.getService(this.api.hap.Service.Fan);
-        if (!this.service) {
-            this.service = accessory.addService(this.api.hap.Service.Fan);
-        }
+        // Migrate from legacy Service.Fan (v1, On-only) to Service.Fanv2 (Active characteristic).
+        // Remove stale cached v1 service so cached accessories don't show both tiles.
+        const legacyFan = accessory.getService(this.api.hap.Service.Fan);
+        if (legacyFan) accessory.removeService(legacyFan);
 
-        this.service.getCharacteristic(this.platform.Characteristic.On)
+        this.service = accessory.getService(this.api.hap.Service.Fanv2)
+            || accessory.addService(this.api.hap.Service.Fanv2);
+
+        this.service.getCharacteristic(this.platform.Characteristic.Active)
             .onGet(this.handleOnGet.bind(this))
             .onSet(this.handleOnSet.bind(this));
 
@@ -41,35 +42,36 @@ export class FanAccessory extends Accessory<Thermostat> {
 
     private handleFanUpdate(fan: Traits.Fan) {
         this.log.debug('Update Fan:' + fan.timerMode, this.accessory.displayName);
-        this.service.updateCharacteristic(this.platform.Characteristic.On, fan.timerMode === FanTimerModeType.ON);
+        const active = fan.timerMode === FanTimerModeType.ON
+            ? this.platform.Characteristic.Active.ACTIVE
+            : this.platform.Characteristic.Active.INACTIVE;
+        this.service.updateCharacteristic(this.platform.Characteristic.Active, active);
     }
 
     /**
-     * Handle requests to set the "On" characteristic
+     * Handle requests to set the "Active" characteristic
      */
-    private async handleOnSet(value:CharacteristicValue) {
+    private async handleOnSet(value: CharacteristicValue) {
         this.log.debug('Triggered SET Fan', this.accessory.displayName);
 
-        if (!_.isBoolean(value))
-            throw new Error(`Cannot set "${value}" as fan state.`);
         if (this.config.fanDuration && (this.config.fanDuration < 1 || this.config.fanDuration > 43200))
             throw new Error(`Cannot set "${this.config.fanDuration}" as fan duration.`);
 
-        await this.device.setFan((value as boolean) ? Traits.FanTimerModeType.ON : FanTimerModeType.OFF, this.config.fanDuration)
+        const timerMode = value === this.platform.Characteristic.Active.ACTIVE
+            ? Traits.FanTimerModeType.ON
+            : FanTimerModeType.OFF;
+        await this.device.setFan(timerMode, this.config.fanDuration);
     }
 
     /**
-     * Handle requests to get the current value of the "On" characteristic
+     * Handle requests to get the current value of the "Active" characteristic
      */
     private async handleOnGet() {
-        this.log.debug('Triggered GET Fan On', this.accessory.displayName);
+        this.log.debug('Triggered GET Fan Active', this.accessory.displayName);
 
         const fan = await this.device.getFan();
-        switch(fan?.timerMode) {
-            case FanTimerModeType.ON:
-                return true;
-            default:
-                return false;
-        }
+        return fan?.timerMode === FanTimerModeType.ON
+            ? this.platform.Characteristic.Active.ACTIVE
+            : this.platform.Characteristic.Active.INACTIVE;
     }
 }

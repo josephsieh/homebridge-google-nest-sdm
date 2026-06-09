@@ -19,8 +19,11 @@ export abstract class Accessory<T> {
         this.api = api;
         this.accessory = accessory;
         this.device = device;
-        new this.api.hap.Service.AccessoryInformation()
-            .setCharacteristic(this.platform.Characteristic.Manufacturer, 'Nest')
+        const info = this.accessory.getService(this.api.hap.Service.AccessoryInformation)
+            || this.accessory.addService(this.api.hap.Service.AccessoryInformation);
+        info.setCharacteristic(this.platform.Characteristic.Manufacturer, 'Google Nest')
+            .setCharacteristic(this.platform.Characteristic.Model, 'Nest Device')
+            .setCharacteristic(this.platform.Characteristic.SerialNumber, this.accessory.UUID);
     }
 
     protected async convertToNullable<T>(input: Promise<T | undefined | null>): Promise<Nullable<T>> {

@@ -32,15 +32,11 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FanAccessory = void 0;
 const Traits = __importStar(require("./sdm/Traits"));
 const Traits_1 = require("./sdm/Traits");
 const Accessory_1 = require("./Accessory");
-const lodash_1 = __importDefault(require("lodash"));
 class FanAccessory extends Accessory_1.Accessory {
     service;
     config;
@@ -50,43 +46,46 @@ class FanAccessory extends Accessory_1.Accessory {
         this.accessory.on("identify" /* PlatformAccessoryEvent.IDENTIFY */, () => {
             log.info("%s fan identified!", accessory.displayName);
         });
-        // create a new Thermostat service
-        this.service = accessory.getService(this.api.hap.Service.Fan);
-        if (!this.service) {
-            this.service = accessory.addService(this.api.hap.Service.Fan);
-        }
-        this.service.getCharacteristic(this.platform.Characteristic.On)
+        // Migrate from legacy Service.Fan (v1, On-only) to Service.Fanv2 (Active characteristic).
+        // Remove stale cached v1 service so cached accessories don't show both tiles.
+        const legacyFan = accessory.getService(this.api.hap.Service.Fan);
+        if (legacyFan)
+            accessory.removeService(legacyFan);
+        this.service = accessory.getService(this.api.hap.Service.Fanv2)
+            || accessory.addService(this.api.hap.Service.Fanv2);
+        this.service.getCharacteristic(this.platform.Characteristic.Active)
             .onGet(this.handleOnGet.bind(this))
             .onSet(this.handleOnSet.bind(this));
         this.device.onFanChanged = this.handleFanUpdate.bind(this);
     }
     handleFanUpdate(fan) {
         this.log.debug('Update Fan:' + fan.timerMode, this.accessory.displayName);
-        this.service.updateCharacteristic(this.platform.Characteristic.On, fan.timerMode === Traits_1.FanTimerModeType.ON);
+        const active = fan.timerMode === Traits_1.FanTimerModeType.ON
+            ? this.platform.Characteristic.Active.ACTIVE
+            : this.platform.Characteristic.Active.INACTIVE;
+        this.service.updateCharacteristic(this.platform.Characteristic.Active, active);
     }
     /**
-     * Handle requests to set the "On" characteristic
+     * Handle requests to set the "Active" characteristic
      */
     async handleOnSet(value) {
         this.log.debug('Triggered SET Fan', this.accessory.displayName);
-        if (!lodash_1.default.isBoolean(value))
-            throw new Error(`Cannot set "${value}" as fan state.`);
         if (this.config.fanDuration && (this.config.fanDuration < 1 || this.config.fanDuration > 43200))
             throw new Error(`Cannot set "${this.config.fanDuration}" as fan duration.`);
-        await this.device.setFan(value ? Traits.FanTimerModeType.ON : Traits_1.FanTimerModeType.OFF, this.config.fanDuration);
+        const timerMode = value === this.platform.Characteristic.Active.ACTIVE
+            ? Traits.FanTimerModeType.ON
+            : Traits_1.FanTimerModeType.OFF;
+        await this.device.setFan(timerMode, this.config.fanDuration);
     }
     /**
-     * Handle requests to get the current value of the "On" characteristic
+     * Handle requests to get the current value of the "Active" characteristic
      */
     async handleOnGet() {
-        this.log.debug('Triggered GET Fan On', this.accessory.displayName);
+        this.log.debug('Triggered GET Fan Active', this.accessory.displayName);
         const fan = await this.device.getFan();
-        switch (fan?.timerMode) {
-            case Traits_1.FanTimerModeType.ON:
-                return true;
-            default:
-                return false;
-        }
+        return fan?.timerMode === Traits_1.FanTimerModeType.ON
+            ? this.platform.Characteristic.Active.ACTIVE
+            : this.platform.Characteristic.Active.INACTIVE;
     }
 }
 exports.FanAccessory = FanAccessory;

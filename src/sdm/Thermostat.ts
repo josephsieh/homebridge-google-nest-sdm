@@ -265,9 +265,12 @@ export class Thermostat extends Device {
     }
 
     async setFan(timerMode: FanTimerModeType, duration?: number) {
-        await this.executeCommand<Commands.ThermostatFan_SetTimer, void>(Commands.Constants.ThermostatFan_SetTimer, {
-            timerMode: timerMode,
-            duration: duration + 's'
-        })
+        const params: Commands.ThermostatFan_SetTimer = {
+            timerMode: timerMode
+        };
+        if (timerMode === FanTimerModeType.ON && duration !== undefined && duration !== null) {
+            params.duration = duration + 's';
+        }
+        await this.executeCommand<Commands.ThermostatFan_SetTimer, void>(Commands.Constants.ThermostatFan_SetTimer, params)
     }
 }
