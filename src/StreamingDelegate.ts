@@ -169,8 +169,16 @@ export abstract class StreamingDelegate<T extends CameraController> implements C
   handleSnapshotRequest(request: SnapshotRequest, callback: SnapshotRequestCallback): void {
     this.camera.getSnapshot()
         .then(result => {
-          callback(undefined, result);
+          if (result === undefined) {
+            callback(new Error('getSnapshot returned undefined'));
+          } else {
+            callback(undefined, result);
+          }
         })
+        .catch(error => {
+          this.log.error('Failed to get snapshot: ', error.stack ?? error, this.camera.getDisplayName());
+          callback(error);
+        });
   }
 
   private static determineResolution(request: VideoInfo): ResolutionInfo {

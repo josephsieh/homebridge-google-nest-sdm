@@ -101,7 +101,7 @@ class Camera extends Device_1.Device {
             setTimeout(() => this.image = null, 10000);
         }
         catch (error) {
-            this.log.error('Could not execute event image GET request: ', JSON.stringify(error), this.getDisplayName());
+            this.log.error('Could not execute event image GET request: ', error.stack ?? error, this.getDisplayName());
         }
     }
     async getCameraLiveStream() {
