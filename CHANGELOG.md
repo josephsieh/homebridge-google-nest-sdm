@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [2.0.7] - 2026-06-09
+
+### Refactored
+- **Thermostat Accessory:** Extracted and simplified temperature conversion, bounds calculations, and characteristic maps from ThermostatAccessory.ts into a separate cohesive helper file ThermostatUtils.ts, raising overall cohesion and maintainability.
+
+### Fixed
+- **Event Loop & Reconnection:** Added a robust try/catch wrapper around Pub/Sub message JSON parsing and event dispatching in Api.ts. Added automatic exponential backoff reconnection attempts to handle network and Pub/Sub socket drops.
+- **Camera Caching & Performance:** Implemented memory caching for camera snapshot default logo placeholders to prevent redundant file system reads in Camera.ts. Extended event-triggered image retention from 10 seconds to 5 minutes to improve snapshot loading in HomeKit.
+- **Process Management:** Adjusted FfMpegProcess.ts to attempt graceful SIGTERM signals for process termination, falling back to forceful SIGKILL only if the subprocess fails to exit after 500ms.
+
+---
 ## [2.0.6] - 2026-06-09
 
 ### Fixed
