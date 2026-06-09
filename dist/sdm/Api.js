@@ -71,13 +71,9 @@ class SmartDeviceManagement {
                 //use GCP project ID if it's present
                 projectId: config.gcpProjectId || config.projectId,
                 credentials: {
-                    // @ts-ignore
                     type: 'authorized_user',
-                    // @ts-ignore
                     client_id: config.clientId,
-                    // @ts-ignore
                     client_secret: config.clientSecret,
-                    // @ts-ignore
                     refresh_token: config.refreshToken
                 }
             });
