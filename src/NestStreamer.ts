@@ -42,6 +42,7 @@ export class RtspNestStreamer extends NestStreamer {
 export class WebRtcNestStreamer extends NestStreamer {
     private udp: Socket | undefined;
     private pc: RTCPeerConnection | undefined;
+    private remoteVideoSsrc: number | undefined;
 
     async initialize(): Promise<NestStream> {
 
@@ -114,9 +115,16 @@ export class WebRtcNestStreamer extends NestStreamer {
             // Start sending PLI immediately on connection and periodically every 2 seconds
             let pliInterval: NodeJS.Timeout | undefined;
             const sendPli = () => {
+                const ssrcsToTry = new Set<number>();
                 if (track.ssrc) {
-                    this.log.debug(`Sending PLI for video track SSRC ${track.ssrc}`, this.camera.getDisplayName());
-                    videoTransceiver.receiver.sendRtcpPLI(track.ssrc);
+                    ssrcsToTry.add(track.ssrc);
+                }
+                if (this.remoteVideoSsrc) {
+                    ssrcsToTry.add(this.remoteVideoSsrc);
+                }
+                for (const ssrc of ssrcsToTry) {
+                    this.log.debug(`Sending PLI for video track SSRC ${ssrc}`, this.camera.getDisplayName());
+                    videoTransceiver.receiver.sendRtcpPLI(ssrc);
                 }
             };
             const startPli = () => {
@@ -153,6 +161,7 @@ export class WebRtcNestStreamer extends NestStreamer {
 
         const streamInfo = <GenerateWebRtcStream> await this.camera.generateStream(offer.sdp);
         this.token = streamInfo.mediaSessionId;
+        this.remoteVideoSsrc = parseVideoSsrc(streamInfo.answerSdp);
         await this.pc.setRemoteDescription({
             type: 'answer',
             sdp: streamInfo.answerSdp
@@ -208,4 +217,23 @@ export async function getStreamer(log: Logger, camera: Camera): Promise<NestStre
     } else {
         return new RtspNestStreamer(log, camera);
     }
+}
+
+function parseVideoSsrc(sdp: string): number | undefined {
+    const lines = sdp.split(/\r?\n/);
+    let inVideoSection = false;
+    for (const line of lines) {
+        if (line.startsWith('m=video')) {
+            inVideoSection = true;
+        } else if (line.startsWith('m=')) {
+            inVideoSection = false;
+        }
+        if (inVideoSection && line.startsWith('a=ssrc:')) {
+            const match = line.match(/^a=ssrc:(\d+)/);
+            if (match) {
+                return parseInt(match[1], 10);
+            }
+        }
+    }
+    return undefined;
 }

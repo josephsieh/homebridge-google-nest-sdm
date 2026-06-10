@@ -65,6 +65,7 @@ exports.RtspNestStreamer = RtspNestStreamer;
 class WebRtcNestStreamer extends NestStreamer {
     udp;
     pc;
+    remoteVideoSsrc;
     async initialize() {
         this.udp = (0, dgram_1.createSocket)("udp4");
         this.pc = new werift_1.RTCPeerConnection({
@@ -128,9 +129,16 @@ class WebRtcNestStreamer extends NestStreamer {
             // Start sending PLI immediately on connection and periodically every 2 seconds
             let pliInterval;
             const sendPli = () => {
+                const ssrcsToTry = new Set();
                 if (track.ssrc) {
-                    this.log.debug(`Sending PLI for video track SSRC ${track.ssrc}`, this.camera.getDisplayName());
-                    videoTransceiver.receiver.sendRtcpPLI(track.ssrc);
+                    ssrcsToTry.add(track.ssrc);
+                }
+                if (this.remoteVideoSsrc) {
+                    ssrcsToTry.add(this.remoteVideoSsrc);
+                }
+                for (const ssrc of ssrcsToTry) {
+                    this.log.debug(`Sending PLI for video track SSRC ${ssrc}`, this.camera.getDisplayName());
+                    videoTransceiver.receiver.sendRtcpPLI(ssrc);
                 }
             };
             const startPli = () => {
@@ -163,6 +171,7 @@ class WebRtcNestStreamer extends NestStreamer {
         await this.pc.setLocalDescription(offer);
         const streamInfo = await this.camera.generateStream(offer.sdp);
         this.token = streamInfo.mediaSessionId;
+        this.remoteVideoSsrc = parseVideoSsrc(streamInfo.answerSdp);
         await this.pc.setRemoteDescription({
             type: 'answer',
             sdp: streamInfo.answerSdp
@@ -218,5 +227,24 @@ async function getStreamer(log, camera) {
     else {
         return new RtspNestStreamer(log, camera);
     }
+}
+function parseVideoSsrc(sdp) {
+    const lines = sdp.split(/\r?\n/);
+    let inVideoSection = false;
+    for (const line of lines) {
+        if (line.startsWith('m=video')) {
+            inVideoSection = true;
+        }
+        else if (line.startsWith('m=')) {
+            inVideoSection = false;
+        }
+        if (inVideoSection && line.startsWith('a=ssrc:')) {
+            const match = line.match(/^a=ssrc:(\d+)/);
+            if (match) {
+                return parseInt(match[1], 10);
+            }
+        }
+    }
+    return undefined;
 }
 //# sourceMappingURL=NestStreamer.js.map

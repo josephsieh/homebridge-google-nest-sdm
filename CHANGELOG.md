@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [2.0.22] - 2026-06-09
+
+### Fixed
+- **WebRTC PLI SSRC Alignment:** Extracted the remote video stream SSRC directly from the negotiated SDP Answer. The plugin now sends PLI requests targeting both the SDP negotiated SSRC and the receiver-detected track SSRC. This prevents Google's Nest servers from ignoring keyframe requests due to SSRC mismatches, resolving frozen streams.
+
+---
 ## [2.0.21] - 2026-06-09
 
 ### Fixed
