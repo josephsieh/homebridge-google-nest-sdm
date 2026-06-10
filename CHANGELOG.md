@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [2.0.24] - 2026-06-10
+
+### Fixed
+- **RTP sequence gap compensation:** Padding-only probe packets (dropped before relay) still consume sequence numbers, causing ffmpeg to report `RTP: missed N packets` and stall its jitter buffer. Now subtract the running count of dropped padding packets from forwarded sequence numbers so ffmpeg sees a contiguous sequence while preserving relative ordering of genuine packets.
+- **Audio SSRC fallback:** Google's SDM answer SDP declares audio as `msid:virtual-6666` / `a=ssrc:6666`, but the actual audio RTP may arrive under a different SSRC. werift's `RtpRouter` silently drops any packet whose SSRC is not in its registration table. This release wraps `routeRtp` to intercept unregistered-SSRC packets, log them once per new SSRC, and relay Opus PT 96 packets directly to ffmpeg.
+- **REMB observability:** The REMB send was previously wrapped in a silent catch. Now logs a debug line on first successful send and a warning with the error message on first failure, making it possible to confirm REMB is actually reaching the camera.
+- **PLI backoff:** Reduced PLI frequency from a fixed 2 s interval to 2 s for the first 10 s, then 10 s. Each PLI forces a full IDR keyframe, consuming a large fraction of the ~640 kbps budget and suppressing frame rate. Faster initial rate ensures the first IDR arrives promptly; slower ongoing rate reduces encoder overhead.
+
+### Changed
+- **Recommended config:** Remove `"vEncoder": "copy"` from plugin config and use the default libx264 transcode. Copy mode passes through H.264 High profile while HomeKit negotiates MAIN/3.1, and the stream starts with decode errors (corrupt pre-IDR frames). Transcode decodes and re-encodes to clean MAIN/3.1 at the negotiated parameters. 640×360 transcode is trivial for the NAS CPU.
+
+---
 ## [2.0.23] - 2026-06-09
 
 ### Fixed

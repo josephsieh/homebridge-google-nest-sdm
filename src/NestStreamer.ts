@@ -82,8 +82,6 @@ export class WebRtcNestStreamer extends NestStreamer {
             }
         });
 
-
-
         this.pc.connectionStateChange.subscribe((state) => {
             this.log.info(`WebRTC Connection State: ${state}`, this.camera.getDisplayName());
         });
@@ -94,16 +92,48 @@ export class WebRtcNestStreamer extends NestStreamer {
           reserveTimeout: 15
         };
         const audioPort = await pickPort(options);
+
+        // Shared audio relay state — used by both the werift track path and the
+        // unknown-SSRC fallback so they share the same seq counter and first-packet flag.
+        let audioDropped = 0;
+        let audioFirstPacketLogged = false;
+        const relayAudio = (rtp: any) => {
+            if (rtp.payload.length === 0) { audioDropped++; return; }
+            if (!audioFirstPacketLogged) {
+                audioFirstPacketLogged = true;
+                this.log.info("Received first WebRTC audio packet from Nest", this.camera.getDisplayName());
+            }
+            rtp.header.sequenceNumber = (rtp.header.sequenceNumber - audioDropped) & 0xffff;
+            this.udp!.send(rtp.serialize(), audioPort, "127.0.0.1");
+        };
+
         const audioTransceiver = this.pc.addTransceiver("audio", {direction: "recvonly"});
         audioTransceiver.onTrack.subscribe((track) => {
-            track.onReceiveRtp.once(() => {
-                this.log.info("Received first WebRTC audio packet from Nest", this.camera.getDisplayName());
-            });
-            track.onReceiveRtp.subscribe((rtp) => {
-                if (rtp.payload.length === 0) return;
-                this.udp!.send(rtp.serialize(), audioPort, "127.0.0.1");
-            });
+            track.onReceiveRtp.subscribe(relayAudio);
         });
+
+        // Wrap werift's RTP router to catch audio packets that arrive under an SSRC
+        // not registered in werift's ssrcTable (Google's "virtual-6666" audio track
+        // often sends from a different real SSRC that werift silently drops).
+        const router = (this.pc as any).router;
+        const origRouteRtp = router.routeRtp.bind(router);
+        const seenUnknownSsrcs = new Set<number>();
+        router.routeRtp = (packet: any) => {
+            if (!router.ssrcTable[packet.header.ssrc]) {
+                if (!seenUnknownSsrcs.has(packet.header.ssrc)) {
+                    seenUnknownSsrcs.add(packet.header.ssrc);
+                    this.log.info(
+                        `RTP with unregistered SSRC ${packet.header.ssrc}, payload type ${packet.header.payloadType}`,
+                        this.camera.getDisplayName()
+                    );
+                }
+                if (packet.header.payloadType === 96) {
+                    relayAudio(packet);
+                }
+                return;
+            }
+            origRouteRtp(packet);
+        };
 
         let videoPort = await pickPort(options);
         while (Math.abs(videoPort - audioPort) < 2) {
@@ -111,22 +141,23 @@ export class WebRtcNestStreamer extends NestStreamer {
         }
         const videoTransceiver = this.pc.addTransceiver("video", {direction: "recvonly"});
         videoTransceiver.onTrack.subscribe((track) => {
-            // Start PLI on the first received video RTP packet — at that point DTLS/SRTP is
-            // confirmed up, so sendRtcpPLI is guaranteed to deliver the packet. Triggering
-            // PLI at onTrack time (SDP processing) can race the DTLS handshake and be
-            // silently dropped by sendRtcpPLI's internal try/catch.
+            // PLI timing: start on first received RTP packet (DTLS/SRTP confirmed up).
+            // Backoff: 2 s for the first 10 s, then 10 s — each PLI forces a full IDR
+            // and consumes a large fraction of the ~640 kbps budget.
             let pliInterval: NodeJS.Timeout | undefined;
+            let pliCount = 0;
             const sendPli = () => {
                 const ssrcsToTry = new Set<number>();
-                if (track.ssrc) {
-                    ssrcsToTry.add(track.ssrc);
-                }
-                if (this.remoteVideoSsrc) {
-                    ssrcsToTry.add(this.remoteVideoSsrc);
-                }
+                if (track.ssrc) ssrcsToTry.add(track.ssrc);
+                if (this.remoteVideoSsrc) ssrcsToTry.add(this.remoteVideoSsrc);
                 for (const ssrc of ssrcsToTry) {
                     this.log.debug(`Sending PLI for video track SSRC ${ssrc}`, this.camera.getDisplayName());
                     videoTransceiver.receiver.sendRtcpPLI(ssrc);
+                }
+                pliCount++;
+                if (pliCount === 5 && pliInterval) {
+                    clearInterval(pliInterval);
+                    pliInterval = setInterval(sendPli, 10000);
                 }
             };
             const startPli = () => {
@@ -136,12 +167,14 @@ export class WebRtcNestStreamer extends NestStreamer {
                 }
             };
 
+            let videoDropped = 0;
             track.onReceiveRtp.once(() => {
                 this.log.info("Received first WebRTC video packet from Nest", this.camera.getDisplayName());
                 startPli();
             });
             track.onReceiveRtp.subscribe((rtp) => {
-                if (rtp.payload.length === 0) return;
+                if (rtp.payload.length === 0) { videoDropped++; return; }
+                rtp.header.sequenceNumber = (rtp.header.sequenceNumber - videoDropped) & 0xffff;
                 this.udp!.send(rtp.serialize(), videoPort, "127.0.0.1");
             });
 
@@ -168,10 +201,11 @@ export class WebRtcNestStreamer extends NestStreamer {
             sdp: streamInfo.answerSdp
         });
 
-        // Send REMB every second so the Nest camera ramps its send bitrate above the
+        // Send REMB every second so the Nest camera ramps its bitrate above the
         // ~300 kbps libwebrtc floor. Google's answer SDP negotiates goog-remb (not
-        // transport-cc), so the sender only increases bitrate when it receives REMB
-        // feedback from us. werift never sends REMB automatically.
+        // transport-cc), so the sender only increases bitrate when it receives REMB.
+        // werift never sends REMB automatically.
+        let rembLoggedOk = false;
         const sendRemb = () => {
             if (!this.remoteVideoSsrc) return;
             try {
@@ -186,8 +220,14 @@ export class WebRtcNestStreamer extends NestStreamer {
                     }),
                 });
                 videoTransceiver.receiver.dtlsTransport.sendRtcp([remb]);
-            } catch {
-                // DTLS handshake may not be complete yet; the interval will retry.
+                if (!rembLoggedOk) {
+                    rembLoggedOk = true;
+                    this.log.debug("REMB send succeeded", this.camera.getDisplayName());
+                }
+            } catch (err: any) {
+                if (!rembLoggedOk) {
+                    this.log.warn(`REMB send failed: ${err?.message ?? err}`, this.camera.getDisplayName());
+                }
             }
         };
         this.rembInterval = setInterval(sendRemb, 1000);
