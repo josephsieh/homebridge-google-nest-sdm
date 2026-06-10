@@ -47,13 +47,26 @@ export class Camera extends Device {
     getResolutions(isCopy = false): [number, number, number][] {
         if (isCopy) {
             const liveStreamTrait = this.device?.traits?.[Traits.Constants.CameraLiveStream] as Traits.CameraLiveStream | undefined;
-            if (liveStreamTrait?.maxImageResolution) {
-                const { width, height } = liveStreamTrait.maxImageResolution;
-                return [
-                    [width, height, 30],
-                    [320, 240, 15] // Apple Watch requires this configuration
-                ];
+            const maxRes = liveStreamTrait?.maxVideoResolution;
+            if (maxRes) {
+                const isPortrait = maxRes.width < maxRes.height;
+                if (isPortrait) {
+                    return [
+                        [480, 640, 30],
+                        [360, 480, 30],
+                        [320, 240, 15] // Apple Watch requires this configuration
+                    ];
+                } else {
+                    return [
+                        [640, 360, 30],
+                        [320, 240, 15] // Apple Watch requires this configuration
+                    ];
+                }
             }
+            return [
+                [640, 360, 30],
+                [320, 240, 15] // Apple Watch requires this configuration
+            ];
         }
         return [
             [320, 180, 30],

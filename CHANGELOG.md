@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [2.0.20] - 2026-06-09
+
+### Fixed
+- **SDM Trait Correctness:** Renamed `maxImageResolution` to `maxVideoResolution` in the `CameraLiveStream` interface to align with Google's official schema definition.
+- **Copy Mode Resolution Mismatch:** Configured `getResolutions` to advertise standard WebRTC resolutions (`640x360` for landscape, `480x640` for portrait) in `copy` mode to eliminate resolution mismatch failures in Apple Home.
+
+---
 ## [2.0.19] - 2026-06-09
 
 ### Fixed

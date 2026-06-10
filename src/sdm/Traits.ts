@@ -115,7 +115,7 @@ export enum ProtocolType {
 }
 
 export interface CameraLiveStream {
-    maxImageResolution: ImageResolution;
+    maxVideoResolution: ImageResolution;
     videoCodecs: VideoCodecType[];
     audioCodecs: AudioCodecType[];
     supportedProtocols: ProtocolType[];
