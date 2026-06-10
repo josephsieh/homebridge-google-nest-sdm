@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [2.0.9] - 2026-06-09
+
+### Fixed
+- **Camera Streaming:** Fixed an issue where live camera streams fail to display (black screen / no video) in the Apple Home app when the `vEncoder` option is set to `"copy"`. This was caused by raw video parameters (`-f rawvideo -pix_fmt yuv420p -color_range mpeg`) being appended to the FFmpeg command line even when in copy mode.
+
+---
+## [2.0.8] - 2026-06-09
+
+### Changed
+- **Documentation:** Updated repository ownership, scoped package name, and fan accessory details.
+
+---
 ## [2.0.7] - 2026-06-09
 
 ### Refactored
