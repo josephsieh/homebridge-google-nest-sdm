@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [2.0.13] - 2026-06-09
+
+### Fixed
+- **Camera Streaming:** Fixed a critical port allocation issue where the video and audio ports returned by `pickPort` could be consecutive. Because FFmpeg's RTP/SDP demuxer automatically binds to `port + 1` for RTCP, consecutive port assignments caused a `bind failed: Address already in use` (exit code 183) failure. The plugin now guarantees that audio and video ports are separated by at least 2 ports.
+
+---
 ## [2.0.12] - 2026-06-09
 
 ### Fixed

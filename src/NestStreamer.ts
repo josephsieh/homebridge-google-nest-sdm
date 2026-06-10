@@ -88,7 +88,10 @@ export class WebRtcNestStreamer extends NestStreamer {
             });
         });
 
-        const videoPort = await pickPort(options);
+        let videoPort = await pickPort(options);
+        while (Math.abs(videoPort - audioPort) < 2) {
+            videoPort = await pickPort(options);
+        }
         const videoTransceiver = this.pc.addTransceiver("video", {direction: "recvonly"});
         videoTransceiver.onTrack.subscribe((track) => {
             videoTransceiver.sender.replaceTrack(track);
