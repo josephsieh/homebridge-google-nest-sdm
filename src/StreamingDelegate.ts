@@ -100,13 +100,14 @@ export abstract class StreamingDelegate<T extends CameraController> implements C
       }
     });
 
+    const isCopy = this.config.vEncoder === 'copy';
     this.options = {
-      cameraStreamCount: camera.getResolutions().length, // HomeKit requires at least 2 streams, but 1 is also just fine
+      cameraStreamCount: camera.getResolutions(isCopy).length, // HomeKit requires at least 2 streams, but 1 is also just fine
       delegate: this,
       streamingOptions: {
         supportedCryptoSuites: [this.hap.SRTPCryptoSuites.AES_CM_128_HMAC_SHA1_80],
         video: {
-          resolutions: camera.getResolutions(),
+          resolutions: camera.getResolutions(isCopy),
           codec: {
             profiles: [this.hap.H264Profile.MAIN],
             levels: [this.hap.H264Level.LEVEL3_1]

@@ -74,7 +74,17 @@ class Camera extends Device_1.Device {
             return cachedGoogleLogo;
         }
     }
-    getResolutions() {
+    getResolutions(isCopy = false) {
+        if (isCopy) {
+            const liveStreamTrait = this.device?.traits?.[Traits.Constants.CameraLiveStream];
+            if (liveStreamTrait?.maxImageResolution) {
+                const { width, height } = liveStreamTrait.maxImageResolution;
+                return [
+                    [width, height, 30],
+                    [320, 240, 15] // Apple Watch requires this configuration
+                ];
+            }
+        }
         return [
             [320, 180, 30],
             [320, 240, 15], // Apple Watch requires this configuration
