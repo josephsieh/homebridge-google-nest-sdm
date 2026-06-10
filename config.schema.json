@@ -41,6 +41,12 @@
         "type": "string",
         "required": false
       },
+      "localIp": {
+        "title": "Local IP Address",
+        "description": "Optional. Override the network IP address sent to HomeKit. Use this if your Synology NAS or server has multiple interfaces (e.g. Open vSwitch, Docker bridges) and the auto-detected IP is incorrect (e.g. 172.17.0.1 or 127.0.0.1).",
+        "type": "string",
+        "required": false
+      },
       "showFan": {
         "title": "Show Fan Switch",
         "type": "boolean",

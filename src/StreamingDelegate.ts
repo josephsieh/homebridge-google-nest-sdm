@@ -249,7 +249,8 @@ export abstract class StreamingDelegate<T extends CameraController> implements C
     const audioSSRC = this.hap.CameraController.generateSynchronisationSource();
 
 
-    const currentAddress = await this.getIpAddress(ipv6);
+    const currentAddress = this.config.localIp || await this.getIpAddress(ipv6);
+    this.log.info(`Preparing stream on local IP: ${currentAddress}`, this.camera.getDisplayName());
 
     const sessionInfo: SessionInfo = {
       address: request.targetAddress,

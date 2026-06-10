@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [2.0.17] - 2026-06-09
+
+### Added
+- **Features:** Added the `localIp` configuration parameter to manually override the network IP address advertised to HomeKit. This resolves "No Response" issues on setups with multiple network interfaces or virtual network adapters (like Synology open vSwitch or Docker bridges) where the plugin auto-detects the wrong network interface.
+- **Diagnostics:** Added a log message that prints the local IP address being used when preparing a stream.
+
+---
 ## [2.0.16] - 2026-06-09
 
 ### Reverted
