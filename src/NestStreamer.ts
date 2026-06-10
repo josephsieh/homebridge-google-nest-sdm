@@ -1,7 +1,7 @@
 import {Camera} from "./sdm/Camera";
 import {GenerateRtspStream, GenerateWebRtcStream} from "./sdm/Responses";
 import {createSocket, Socket} from "dgram";
-import {RTCPeerConnection, RTCRtpCodecParameters} from "werift";
+import {RTCPeerConnection, RTCRtpCodecParameters, RtcpPayloadSpecificFeedback, ReceiverEstimatedMaxBitrate} from "werift";
 import * as Traits from "./sdm/Traits";
 import {Logger} from "homebridge";
 import { pickPort } from 'pick-port';
@@ -39,10 +39,16 @@ export class RtspNestStreamer extends NestStreamer {
     }
 }
 
+// REMB target bitrate: 2 Mbps — libwebrtc canonical encoding (brMantissa << brExp = bitrate;
+// brMantissa must be < 2^18 = 262144; brExp 3, brMantissa 250000 → 250000 << 3 = 2,000,000).
+const REMB_BPS_EXP = 3;
+const REMB_BPS_MANTISSA = 250000;
+
 export class WebRtcNestStreamer extends NestStreamer {
     private udp: Socket | undefined;
     private pc: RTCPeerConnection | undefined;
     private remoteVideoSsrc: number | undefined;
+    private rembInterval: NodeJS.Timeout | undefined;
 
     async initialize(): Promise<NestStream> {
 
@@ -50,6 +56,7 @@ export class WebRtcNestStreamer extends NestStreamer {
 
         this.pc = new RTCPeerConnection({
             bundlePolicy: "max-bundle",
+            iceUseIpv6: false,
             codecs: {
                 audio: [
                     new RTCRtpCodecParameters({
@@ -89,11 +96,11 @@ export class WebRtcNestStreamer extends NestStreamer {
         const audioPort = await pickPort(options);
         const audioTransceiver = this.pc.addTransceiver("audio", {direction: "recvonly"});
         audioTransceiver.onTrack.subscribe((track) => {
-            audioTransceiver.sender.replaceTrack(track);
             track.onReceiveRtp.once(() => {
                 this.log.info("Received first WebRTC audio packet from Nest", this.camera.getDisplayName());
             });
             track.onReceiveRtp.subscribe((rtp) => {
+                if (rtp.payload.length === 0) return;
                 this.udp!.send(rtp.serialize(), audioPort, "127.0.0.1");
             });
         });
@@ -104,15 +111,10 @@ export class WebRtcNestStreamer extends NestStreamer {
         }
         const videoTransceiver = this.pc.addTransceiver("video", {direction: "recvonly"});
         videoTransceiver.onTrack.subscribe((track) => {
-            videoTransceiver.sender.replaceTrack(track);
-            track.onReceiveRtp.once(() => {
-                this.log.info("Received first WebRTC video packet from Nest", this.camera.getDisplayName());
-            });
-            track.onReceiveRtp.subscribe((rtp) => {
-                this.udp!.send(rtp.serialize(), videoPort, "127.0.0.1");
-            });
-
-            // Start sending PLI immediately on connection and periodically every 2 seconds
+            // Start PLI on the first received video RTP packet — at that point DTLS/SRTP is
+            // confirmed up, so sendRtcpPLI is guaranteed to deliver the packet. Triggering
+            // PLI at onTrack time (SDP processing) can race the DTLS handshake and be
+            // silently dropped by sendRtcpPLI's internal try/catch.
             let pliInterval: NodeJS.Timeout | undefined;
             const sendPli = () => {
                 const ssrcsToTry = new Set<number>();
@@ -134,15 +136,14 @@ export class WebRtcNestStreamer extends NestStreamer {
                 }
             };
 
-            if (this.pc!.connectionState === "connected") {
+            track.onReceiveRtp.once(() => {
+                this.log.info("Received first WebRTC video packet from Nest", this.camera.getDisplayName());
                 startPli();
-            } else {
-                this.pc!.connectionStateChange.subscribe((state) => {
-                    if (state === "connected") {
-                        startPli();
-                    }
-                });
-            }
+            });
+            track.onReceiveRtp.subscribe((rtp) => {
+                if (rtp.payload.length === 0) return;
+                this.udp!.send(rtp.serialize(), videoPort, "127.0.0.1");
+            });
 
             this.pc!.connectionStateChange.subscribe((state) => {
                 if (state === "closed" || state === "failed") {
@@ -165,6 +166,39 @@ export class WebRtcNestStreamer extends NestStreamer {
         await this.pc.setRemoteDescription({
             type: 'answer',
             sdp: streamInfo.answerSdp
+        });
+
+        // Send REMB every second so the Nest camera ramps its send bitrate above the
+        // ~300 kbps libwebrtc floor. Google's answer SDP negotiates goog-remb (not
+        // transport-cc), so the sender only increases bitrate when it receives REMB
+        // feedback from us. werift never sends REMB automatically.
+        const sendRemb = () => {
+            if (!this.remoteVideoSsrc) return;
+            try {
+                const remb = new RtcpPayloadSpecificFeedback({
+                    feedback: new ReceiverEstimatedMaxBitrate({
+                        senderSsrc: videoTransceiver.receiver.rtcpSsrc,
+                        mediaSsrc: 0,
+                        ssrcNum: 1,
+                        ssrcFeedbacks: [this.remoteVideoSsrc],
+                        brExp: REMB_BPS_EXP,
+                        brMantissa: REMB_BPS_MANTISSA,
+                    }),
+                });
+                videoTransceiver.receiver.dtlsTransport.sendRtcp([remb]);
+            } catch {
+                // DTLS handshake may not be complete yet; the interval will retry.
+            }
+        };
+        this.rembInterval = setInterval(sendRemb, 1000);
+
+        this.pc.connectionStateChange.subscribe((state) => {
+            if (state === "closed" || state === "failed") {
+                if (this.rembInterval) {
+                    clearInterval(this.rembInterval);
+                    this.rembInterval = undefined;
+                }
+            }
         });
 
         return {
@@ -191,6 +225,11 @@ a=sendrecv`
     }
 
     async teardown(): Promise<void> {
+        if (this.rembInterval) {
+            clearInterval(this.rembInterval);
+            this.rembInterval = undefined;
+        }
+
         try {
             await this.camera.stopStream(this.token!);
         } catch (error: any) {

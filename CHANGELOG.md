@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [2.0.23] - 2026-06-09
+
+### Fixed
+- **WebRTC REMB Feedback (main fix):** Send RTCP Receiver Estimated Maximum Bitrate (REMB) packets at 2 Mbps every second via `videoTransceiver.receiver.dtlsTransport.sendRtcp`. Google's SDM server negotiates `goog-remb` (not `transport-cc`) for bandwidth estimation; without REMB the camera stays at its ~300 kbps floor and floods the stream with padding-only probe packets indefinitely.
+- **Padding-only RTP filtering:** Skip relaying RTP packets with `payload.length === 0` (libwebrtc bandwidth-probe packets that werift strips to empty). Relaying these caused 3,500+ `Empty H.264 RTP packet` warnings in ffmpeg, jitter-buffer churn (`max delay reached`), and eventual demux timeout.
+- **PLI timing:** Start sending Picture Loss Indication on the first received video RTP packet (rather than gated on `connectionState === "connected"`, which was arriving 15 s after media began flowing due to IPv6 ICE candidate checks). First-packet timing guarantees DTLS/SRTP is up so the PLI is actually delivered.
+- **ICE IPv6 disabled:** Set `iceUseIpv6: false` in `RTCPeerConnection` config to avoid slow ICE checks against Google's IPv6 host candidates, which caused the `connected` state to arrive 15 s late.
+- **Removed spurious `replaceTrack` calls:** Deleted `sender.replaceTrack(track)` echo-back on the recvonly audio and video transceivers, which served no purpose.
+
+---
 ## [2.0.22] - 2026-06-09
 
 ### Fixed
