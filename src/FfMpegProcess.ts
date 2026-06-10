@@ -35,6 +35,8 @@ export class FfmpegProcess {
                 sdpStream.pipe(this.process.stdin);
             }
         }
+        const stderrLines: string[] = [];
+
         if (this.process.stderr) {
             this.process.stderr.on('data', (data) => {
                 if (!started) {
@@ -42,6 +44,16 @@ export class FfmpegProcess {
                     if (callback) {
                         callback();
                     }
+                }
+
+                const lines = data.toString().split(/\r?\n/);
+                for (const line of lines) {
+                    if (line.trim()) {
+                        stderrLines.push(line);
+                    }
+                }
+                if (stderrLines.length > 50) {
+                    stderrLines.splice(0, stderrLines.length - 50);
                 }
 
                 if (debug) {
@@ -69,6 +81,13 @@ export class FfmpegProcess {
                 }
             } else {
                 log.error(message + ' (Error)', cameraName);
+                log.error(`Stream command: ${pathToFfmpeg} ${ffmpegArgs}`, cameraName);
+                if (stdin) {
+                    log.error(`Stream stdin:\n${stdin}`, cameraName);
+                }
+                if (stderrLines.length > 0) {
+                    log.error(`FFmpeg stderr:\n${stderrLines.join('\n')}`, cameraName);
+                }
                 delegate.stopStream(sessionId);
                 if (!started && callback) {
                     callback(new Error(message));

@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [2.0.11] - 2026-06-09
+
+### Added
+- **Diagnostics:** Added verbose error logging on FFmpeg stream failures, showing the full `ffmpeg` command, input stdin (SDP), and `stderr` logs automatically in the Homebridge output to aid in debugging stream launch failures.
+
+---
 ## [2.0.10] - 2026-06-09
 
 ### Fixed
