@@ -173,7 +173,8 @@ class StreamingDelegate {
         const videoSSRC = this.hap.CameraController.generateSynchronisationSource();
         const audioReturnPort = await (0, pick_port_1.pickPort)(options);
         const audioSSRC = this.hap.CameraController.generateSynchronisationSource();
-        const currentAddress = await this.getIpAddress(ipv6);
+        const currentAddress = this.config.localIp || await this.getIpAddress(ipv6);
+        this.log.info(`Preparing stream on local IP: ${currentAddress}`, this.camera.getDisplayName());
         const sessionInfo = {
             address: request.targetAddress,
             localAddress: currentAddress,

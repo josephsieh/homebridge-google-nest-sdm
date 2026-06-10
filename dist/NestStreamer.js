@@ -93,6 +93,9 @@ class WebRtcNestStreamer extends NestStreamer {
                 ],
             }
         });
+        this.pc.connectionStateChange.subscribe((state) => {
+            this.log.info(`WebRTC Connection State: ${state}`, this.camera.getDisplayName());
+        });
         const options = {
             type: 'udp',
             ip: '0.0.0.0',
@@ -106,7 +109,10 @@ class WebRtcNestStreamer extends NestStreamer {
                 this.udp.send(rtp.serialize(), audioPort, "127.0.0.1");
             });
         });
-        const videoPort = await (0, pick_port_1.pickPort)(options);
+        let videoPort = await (0, pick_port_1.pickPort)(options);
+        while (Math.abs(videoPort - audioPort) < 2) {
+            videoPort = await (0, pick_port_1.pickPort)(options);
+        }
         const videoTransceiver = this.pc.addTransceiver("video", { direction: "recvonly" });
         videoTransceiver.onTrack.subscribe((track) => {
             videoTransceiver.sender.replaceTrack(track);

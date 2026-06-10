@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [2.0.18] - 2026-06-09
+
+### Added
+- **Diagnostics:** Restored WebRTC Connection State transition logs to aid in diagnosing streaming connection health.
+
+---
 ## [2.0.17] - 2026-06-09
 
 ### Added

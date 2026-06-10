@@ -76,6 +76,10 @@ export class WebRtcNestStreamer extends NestStreamer {
 
 
 
+        this.pc.connectionStateChange.subscribe((state) => {
+            this.log.info(`WebRTC Connection State: ${state}`, this.camera.getDisplayName());
+        });
+
         const options = {
           type: 'udp' as const,
           ip: '0.0.0.0',
