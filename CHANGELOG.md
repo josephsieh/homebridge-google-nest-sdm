@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [2.0.14] - 2026-06-09
+
+### Added
+- **Diagnostics:** Added logging of WebRTC Connection State transitions (e.g. `connecting`, `connected`, `failed`) to assist in identifying network connectivity issues between the plugin and Google's WebRTC servers.
+
+---
 ## [2.0.13] - 2026-06-09
 
 ### Fixed
