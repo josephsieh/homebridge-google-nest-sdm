@@ -35,8 +35,6 @@ export class FfmpegProcess {
                 sdpStream.pipe(this.process.stdin);
             }
         }
-        const stderrLines: string[] = [];
-
         if (this.process.stderr) {
             this.process.stderr.on('data', (data) => {
                 if (!started) {
@@ -46,19 +44,11 @@ export class FfmpegProcess {
                     }
                 }
 
-                const lines = data.toString().split(/\r?\n/);
-                for (const line of lines) {
-                    if (line.trim()) {
-                        stderrLines.push(line);
-                    }
+                if (debug) {
+                    data.toString().split(/\n/).forEach((line: string) => {
+                        log.debug(line, cameraName);
+                    });
                 }
-                if (stderrLines.length > 50) {
-                    stderrLines.splice(0, stderrLines.length - 50);
-                }
-
-                data.toString().split(/\n/).forEach((line: string) => {
-                    log.debug(line, cameraName);
-                });
             });
         }
         this.process.on('error', (error: Error) => {
@@ -68,7 +58,7 @@ export class FfmpegProcess {
             }
             delegate.stopStream(sessionId);
         });
-        this.process.on('close', (code: number, signal: NodeJS.Signals) => {
+        this.process.on('exit', (code: number, signal: NodeJS.Signals) => {
             const message = 'FFmpeg exited with code: ' + code + ' and signal: ' + signal;
 
             if (code == null || code === 255) {
@@ -79,19 +69,6 @@ export class FfmpegProcess {
                 }
             } else {
                 log.error(message + ' (Error)', cameraName);
-                log.error(`Stream command: ${pathToFfmpeg} ${ffmpegArgs}`, cameraName);
-                if (stdin) {
-                    log.error('Stream stdin:', cameraName);
-                    stdin.split(/\r?\n/).forEach((line) => {
-                        log.error('  ' + line, cameraName);
-                    });
-                }
-                if (stderrLines.length > 0) {
-                    log.error('FFmpeg stderr:', cameraName);
-                    stderrLines.forEach((line) => {
-                        log.error('  ' + line, cameraName);
-                    });
-                }
                 delegate.stopStream(sessionId);
                 if (!started && callback) {
                     callback(new Error(message));
