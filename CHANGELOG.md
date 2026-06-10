@@ -8,7 +8,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [2.0.9] - 2026-06-09
 
 ### Fixed
-- **Camera Streaming:** Fixed an issue where live camera streams fail to display (black screen / no video) in the Apple Home app when the `vEncoder` option is set to `"copy"`. This was caused by raw video parameters (`-f rawvideo -pix_fmt yuv420p -color_range mpeg`) being appended to the FFmpeg command line even when in copy mode.
+- **Camera Streaming:** Fixed an issue where live camera streams fail to display (black screen / no video) in the Apple Home app when the `vEncoder` option is set to `"copy"`. This was caused by two issues:
+  1. Raw video parameters (`-f rawvideo -pix_fmt yuv420p -color_range mpeg`) were incorrectly appended to the FFmpeg command line even when in copy mode.
+  2. A resolution mismatch between HomeKit's negotiated stream resolution and the camera's native resolution copied by FFmpeg. The plugin now automatically restricts the advertised resolutions to only the camera's native max resolution (and Apple Watch fallback) when copy mode is enabled, forcing HomeKit to negotiate the native stream resolution.
 
 ---
 ## [2.0.8] - 2026-06-09
