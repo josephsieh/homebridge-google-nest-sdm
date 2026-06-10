@@ -56,11 +56,9 @@ export class FfmpegProcess {
                     stderrLines.splice(0, stderrLines.length - 50);
                 }
 
-                if (debug) {
-                    data.toString().split(/\n/).forEach((line: string) => {
-                        log.debug(line, cameraName);
-                    });
-                }
+                data.toString().split(/\n/).forEach((line: string) => {
+                    log.debug(line, cameraName);
+                });
             });
         }
         this.process.on('error', (error: Error) => {

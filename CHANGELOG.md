@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [2.0.15] - 2026-06-09
+
+### Changed
+- **Diagnostics:** Forward live FFmpeg stderr lines to the logger's debug level unconditionally to support standard Homebridge UI debug logging settings.
+
+---
 ## [2.0.14] - 2026-06-09
 
 ### Added
