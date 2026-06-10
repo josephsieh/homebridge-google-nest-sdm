@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [2.0.19] - 2026-06-09
+
+### Fixed
+- **WebRTC PLI Deadlock:** Send Picture Loss Indicator (PLI) requests immediately upon connection (and every 2 seconds after) to resolve startup deadlocks with Google's Nest SDM server.
+- **First RTP Arrival Logging:** Added informational logs indicating when the first audio and video RTP packets are received from Nest.
+- **FFmpeg Error & Debug Logging:** Unconditionally forward FFmpeg stderr to `log.debug` to bypass argv checking. Additionally, buffer and output the last 50 stderr lines as `log.error` if FFmpeg exits with an error code.
+
+---
 ## [2.0.18] - 2026-06-09
 
 ### Added

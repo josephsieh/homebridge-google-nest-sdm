@@ -105,6 +105,9 @@ class WebRtcNestStreamer extends NestStreamer {
         const audioTransceiver = this.pc.addTransceiver("audio", { direction: "recvonly" });
         audioTransceiver.onTrack.subscribe((track) => {
             audioTransceiver.sender.replaceTrack(track);
+            track.onReceiveRtp.once(() => {
+                this.log.info("Received first WebRTC audio packet from Nest", this.camera.getDisplayName());
+            });
             track.onReceiveRtp.subscribe((rtp) => {
                 this.udp.send(rtp.serialize(), audioPort, "127.0.0.1");
             });
@@ -116,11 +119,43 @@ class WebRtcNestStreamer extends NestStreamer {
         const videoTransceiver = this.pc.addTransceiver("video", { direction: "recvonly" });
         videoTransceiver.onTrack.subscribe((track) => {
             videoTransceiver.sender.replaceTrack(track);
+            track.onReceiveRtp.once(() => {
+                this.log.info("Received first WebRTC video packet from Nest", this.camera.getDisplayName());
+            });
             track.onReceiveRtp.subscribe((rtp) => {
                 this.udp.send(rtp.serialize(), videoPort, "127.0.0.1");
             });
-            track.onReceiveRtp.once(() => {
-                setInterval(() => videoTransceiver.receiver.sendRtcpPLI(track.ssrc), 2000);
+            // Start sending PLI immediately on connection and periodically every 2 seconds
+            let pliInterval;
+            const sendPli = () => {
+                if (track.ssrc) {
+                    this.log.debug(`Sending PLI for video track SSRC ${track.ssrc}`, this.camera.getDisplayName());
+                    videoTransceiver.receiver.sendRtcpPLI(track.ssrc);
+                }
+            };
+            const startPli = () => {
+                if (!pliInterval) {
+                    sendPli();
+                    pliInterval = setInterval(sendPli, 2000);
+                }
+            };
+            if (this.pc.connectionState === "connected") {
+                startPli();
+            }
+            else {
+                this.pc.connectionStateChange.subscribe((state) => {
+                    if (state === "connected") {
+                        startPli();
+                    }
+                });
+            }
+            this.pc.connectionStateChange.subscribe((state) => {
+                if (state === "closed" || state === "failed") {
+                    if (pliInterval) {
+                        clearInterval(pliInterval);
+                        pliInterval = undefined;
+                    }
+                }
             });
         });
         this.pc.createDataChannel('dataSendChannel', { id: 1 });
