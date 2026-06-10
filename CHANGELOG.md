@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [2.0.12] - 2026-06-09
+
+### Fixed
+- **Diagnostics:** Listen to the `close` event instead of the `exit` event to ensure all asynchronous `stderr` data has finished flushing before logging error diagnostics.
+- **Diagnostics:** Log `stdin` and `stderr` line-by-line to prevent output truncation in the Homebridge console log parser.
+
+---
 ## [2.0.11] - 2026-06-09
 
 ### Added

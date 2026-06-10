@@ -70,7 +70,7 @@ export class FfmpegProcess {
             }
             delegate.stopStream(sessionId);
         });
-        this.process.on('exit', (code: number, signal: NodeJS.Signals) => {
+        this.process.on('close', (code: number, signal: NodeJS.Signals) => {
             const message = 'FFmpeg exited with code: ' + code + ' and signal: ' + signal;
 
             if (code == null || code === 255) {
@@ -83,10 +83,16 @@ export class FfmpegProcess {
                 log.error(message + ' (Error)', cameraName);
                 log.error(`Stream command: ${pathToFfmpeg} ${ffmpegArgs}`, cameraName);
                 if (stdin) {
-                    log.error(`Stream stdin:\n${stdin}`, cameraName);
+                    log.error('Stream stdin:', cameraName);
+                    stdin.split(/\r?\n/).forEach((line) => {
+                        log.error('  ' + line, cameraName);
+                    });
                 }
                 if (stderrLines.length > 0) {
-                    log.error(`FFmpeg stderr:\n${stderrLines.join('\n')}`, cameraName);
+                    log.error('FFmpeg stderr:', cameraName);
+                    stderrLines.forEach((line) => {
+                        log.error('  ' + line, cameraName);
+                    });
                 }
                 delegate.stopStream(sessionId);
                 if (!started && callback) {
