@@ -168,7 +168,7 @@ class WebRtcNestStreamer extends NestStreamer {
             sdp: streamInfo.answerSdp
         });
         return {
-            args: `-protocol_whitelist pipe,crypto,udp,rtp,fd -analyzeduration 15000000 -probesize 100000000 -i -`,
+            args: `-protocol_whitelist pipe,crypto,udp,rtp,fd -analyzeduration 1000000 -probesize 1000000 -fflags nobuffer -flags low_delay -i -`,
             stdin: `v=0
 o=- 0 0 IN IP4 127.0.0.1
 s=-

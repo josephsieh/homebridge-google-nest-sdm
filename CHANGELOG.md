@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [2.0.21] - 2026-06-09
+
+### Fixed
+- **FFmpeg WebRTC Initialization Latency:** Reduced WebRTC stream `analyzeduration` to 1 second and `probesize` to 1MB, and added `-fflags nobuffer -flags low_delay`. This prevents FFmpeg from blocking/hanging for 30 seconds waiting for silent/missing audio packets, enabling instant startup.
+
+---
 ## [2.0.20] - 2026-06-09
 
 ### Fixed
