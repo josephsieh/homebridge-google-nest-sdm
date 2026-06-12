@@ -104,3 +104,7 @@ typings/
 
 # TernJS port file
 .tern-port
+
+# OS files
+.DS_Store
+
