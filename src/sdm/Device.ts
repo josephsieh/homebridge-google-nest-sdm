@@ -9,6 +9,7 @@ export abstract class Device {
     protected lastRefresh: number;
     protected displayName: string|null|undefined;
     protected log: Logger;
+    protected refreshPromise: Promise<void> | null = null;
     constructor(smartdevicemanagement: google.smartdevicemanagement_v1.Smartdevicemanagement,
                 device: google.smartdevicemanagement_v1.Schema$GoogleHomeEnterpriseSdmV1Device,
                 log: Logger) {
@@ -36,28 +37,40 @@ export abstract class Device {
         return <string>this.device.name;
     }
 
-    async refresh() {
-        try {
-            const response = await this.smartdevicemanagement.enterprises.devices.get({name: this.getName()});
-            this.log.debug(`Request for device info for ${this.getDisplayName()} had value ${JSON.stringify(response.data)}`);
-            this.device = response.data;
-            this.lastRefresh = Date.now();
-        } catch (error: any) {
-            this.log.error('Could not execute device GET request: ', error.stack ?? error, this.getDisplayName());
+    async refresh(): Promise<void> {
+        if (this.refreshPromise) {
+            return this.refreshPromise;
         }
+
+        this.refreshPromise = (async () => {
+            try {
+                const response = await this.smartdevicemanagement.enterprises.devices.get({name: this.getName()});
+                this.log.debug(`Request for device info for ${this.getDisplayName()} had value ${JSON.stringify(response.data)}`);
+                this.device = response.data;
+                this.lastRefresh = Date.now();
+            } catch (error: any) {
+                this.log.error('Could not execute device GET request: ', error.stack ?? error, this.getDisplayName());
+                throw error;
+            } finally {
+                this.refreshPromise = null;
+            }
+        })();
+
+        return this.refreshPromise;
     }
 
     async getTrait<T>(name: string): Promise<T | null> {
         const howLongAgo: number = Date.now() - this.lastRefresh;
-        //Events will update traits as necessary
-        //no need to refresh more than once per day
-        if (howLongAgo > 1000 * 60 * 60 * 24) {
-            await this.refresh();
-            this.log.debug(`Last refresh for ${this.getDisplayName()} was ${howLongAgo/1000}s, refreshing.`)
+        // If cache is older than 30 seconds, perform a coalesced refresh
+        if (howLongAgo > 30000) {
+            try {
+                await this.refresh();
+            } catch (err) {
+                this.log.error(`Failed to refresh traits for ${this.getDisplayName()}:`, err);
+            }
         }
 
         const value = this.device?.traits ? this.device?.traits[name] : null;
-        //this.log.debug(`Request for trait ${name} had value ${JSON.stringify(value)}`, this.getDisplayName());
         return value;
     }
 
