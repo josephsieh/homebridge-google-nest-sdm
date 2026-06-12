@@ -53,15 +53,14 @@ class FanAccessory extends Accessory_1.Accessory {
             accessory.removeService(legacyFan);
         this.service = accessory.getService(this.api.hap.Service.Fanv2)
             || accessory.addService(this.api.hap.Service.Fanv2);
+        // Remove stale CurrentFanState if cached from a prior version — Apple Home's detail view
+        // renders inconsistently when this optional characteristic is present on Fanv2.
+        if (this.service.testCharacteristic(this.platform.Characteristic.CurrentFanState)) {
+            this.service.removeCharacteristic(this.service.getCharacteristic(this.platform.Characteristic.CurrentFanState));
+        }
         this.service.getCharacteristic(this.platform.Characteristic.Active)
             .onGet(this.handleOnGet.bind(this))
             .onSet(this.handleOnSet.bind(this));
-        // Ensure CurrentFanState characteristic exists and is bound to handle status syncing.
-        let currentFanState = this.service.getCharacteristic(this.platform.Characteristic.CurrentFanState);
-        if (!currentFanState) {
-            currentFanState = this.service.addCharacteristic(this.platform.Characteristic.CurrentFanState);
-        }
-        currentFanState.onGet(this.handleCurrentFanStateGet.bind(this));
         this.device.onFanChanged = this.handleFanUpdate.bind(this);
     }
     handleFanUpdate(fan) {
@@ -70,14 +69,7 @@ class FanAccessory extends Accessory_1.Accessory {
             ? this.platform.Characteristic.Active.ACTIVE
             : this.platform.Characteristic.Active.INACTIVE;
         this.service.updateCharacteristic(this.platform.Characteristic.Active, active);
-        const currentState = fan.timerMode === Traits_1.FanTimerModeType.ON
-            ? this.platform.Characteristic.CurrentFanState.BLOWING_AIR
-            : this.platform.Characteristic.CurrentFanState.INACTIVE;
-        this.service.updateCharacteristic(this.platform.Characteristic.CurrentFanState, currentState);
     }
-    /**
-     * Handle requests to set the "Active" characteristic
-     */
     async handleOnSet(value) {
         this.log.debug('Triggered SET Fan', this.accessory.displayName);
         if (this.config.fanDuration && (this.config.fanDuration < 1 || this.config.fanDuration > 43200))
@@ -86,35 +78,17 @@ class FanAccessory extends Accessory_1.Accessory {
             ? Traits.FanTimerModeType.ON
             : Traits_1.FanTimerModeType.OFF;
         await this.device.setFan(timerMode, this.config.fanDuration);
-        // Update characteristics immediately to reflect the new state in UI
         const active = timerMode === Traits_1.FanTimerModeType.ON
             ? this.platform.Characteristic.Active.ACTIVE
             : this.platform.Characteristic.Active.INACTIVE;
         this.service.updateCharacteristic(this.platform.Characteristic.Active, active);
-        const currentState = timerMode === Traits_1.FanTimerModeType.ON
-            ? this.platform.Characteristic.CurrentFanState.BLOWING_AIR
-            : this.platform.Characteristic.CurrentFanState.INACTIVE;
-        this.service.updateCharacteristic(this.platform.Characteristic.CurrentFanState, currentState);
     }
-    /**
-     * Handle requests to get the current value of the "Active" characteristic
-     */
     async handleOnGet() {
         this.log.debug('Triggered GET Fan Active', this.accessory.displayName);
         const fan = await this.device.getFan();
         return fan?.timerMode === Traits_1.FanTimerModeType.ON
             ? this.platform.Characteristic.Active.ACTIVE
             : this.platform.Characteristic.Active.INACTIVE;
-    }
-    /**
-     * Handle requests to get the current value of the "Current Fan State" characteristic
-     */
-    async handleCurrentFanStateGet() {
-        this.log.debug('Triggered GET Fan Current State', this.accessory.displayName);
-        const fan = await this.device.getFan();
-        return fan?.timerMode === Traits_1.FanTimerModeType.ON
-            ? this.platform.Characteristic.CurrentFanState.BLOWING_AIR
-            : this.platform.Characteristic.CurrentFanState.INACTIVE;
     }
 }
 exports.FanAccessory = FanAccessory;

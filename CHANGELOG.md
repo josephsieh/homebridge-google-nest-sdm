@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [2.0.25] - 2026-06-11
+
+### Fixed
+- **Fan Accessory:** Removed the optional `CurrentFanState` characteristic from `Service.Fanv2`. Apple Home's detail view rendered the fan as OFF immediately after a Nest-app toggle (while the grid tile correctly showed ON) when this characteristic was present. Exposing only `Active` — which reflects the manual Nest fan timer (`timerMode`) — resolves the grid/detail inconsistency and matches the intended "manual fan timer only" semantics. Any cached `CurrentFanState` from a prior version is removed on startup. After the first restart, Apple Home may briefly show "Updating…" or require the app to be reopened once while it re-syncs the accessory.
+
+---
 ## [2.0.24] - 2026-06-10
 
 ### Fixed
