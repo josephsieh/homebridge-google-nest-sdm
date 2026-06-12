@@ -46,6 +46,18 @@ export class FanAccessory extends Accessory<Thermostat> {
             .onSet(this.handleOnSet.bind(this));
 
         this.device.onFanChanged = this.handleFanUpdate.bind(this);
+
+        // Perform initial state sync from the cached device traits
+        this.device.getFan().then(fan => {
+            if (fan) {
+                const active = fan.timerMode === Traits.FanTimerModeType.ON
+                    ? this.platform.Characteristic.Active.ACTIVE
+                    : this.platform.Characteristic.Active.INACTIVE;
+                this.service.updateCharacteristic(this.platform.Characteristic.Active, active);
+            }
+        }).catch(err => {
+            this.log.error('Failed to perform initial fan state sync:', err);
+        });
     }
 
     private handleFanUpdate(fan: Traits.Fan) {
@@ -59,18 +71,26 @@ export class FanAccessory extends Accessory<Thermostat> {
     private async handleOnSet(value: CharacteristicValue) {
         this.log.debug('Triggered SET Fan', this.accessory.displayName);
 
-        if (this.config.fanDuration && (this.config.fanDuration < 1 || this.config.fanDuration > 43200))
-            throw new Error(`Cannot set "${this.config.fanDuration}" as fan duration.`);
+        if (this.config.fanDuration !== undefined && this.config.fanDuration !== null) {
+            if (this.config.fanDuration < 1 || this.config.fanDuration > 43200) {
+                throw new Error(`Cannot set "${this.config.fanDuration}" as fan duration.`);
+            }
+        }
 
         const timerMode = (value === this.platform.Characteristic.Active.ACTIVE || value === true || value === 1)
             ? Traits.FanTimerModeType.ON
             : FanTimerModeType.OFF;
-        await this.device.setFan(timerMode, this.config.fanDuration);
 
-        const active = timerMode === FanTimerModeType.ON
-            ? this.platform.Characteristic.Active.ACTIVE
-            : this.platform.Characteristic.Active.INACTIVE;
-        this.service.updateCharacteristic(this.platform.Characteristic.Active, active);
+        try {
+            await this.device.setFan(timerMode, this.config.fanDuration);
+            const active = timerMode === FanTimerModeType.ON
+                ? this.platform.Characteristic.Active.ACTIVE
+                : this.platform.Characteristic.Active.INACTIVE;
+            this.service.updateCharacteristic(this.platform.Characteristic.Active, active);
+        } catch (err: any) {
+            this.log.error(`Failed to set Nest fan state: ${err.message || err}`, this.accessory.displayName);
+            throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+        }
     }
 
     private async handleOnGet() {

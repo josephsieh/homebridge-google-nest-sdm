@@ -75,8 +75,7 @@ export abstract class Device {
             return <U>response.data.results;
         } catch (error: any) {
             this.log.error('Could not execute device command: ', error.stack ?? error, this.getDisplayName());
+            throw error;
         }
-
-        return undefined;
     }
 }

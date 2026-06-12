@@ -92,17 +92,23 @@ class Platform {
                 existingAccessory: this.accessories.find(accessory => accessory.UUID === uuid)
             };
         });
-        devices.filter(device => device instanceof Thermostat_1.Thermostat).forEach(thermostatDevice => {
+        for (const thermostatDevice of devices.filter(device => device instanceof Thermostat_1.Thermostat)) {
             if (this.config.showFan) {
-                const uuid = this.api.hap.uuid.generate(thermostatDevice.getName() + ' Fan');
-                deviceInfos.push({
-                    device: thermostatDevice,
-                    uuid: uuid,
-                    category: 3 /* this.api.hap.Categories.FAN */,
-                    existingAccessory: this.accessories.find(accessory => accessory.UUID === uuid)
-                });
+                const fanTrait = await thermostatDevice.getFan();
+                if (fanTrait) {
+                    const uuid = this.api.hap.uuid.generate(thermostatDevice.getName() + ' Fan');
+                    deviceInfos.push({
+                        device: thermostatDevice,
+                        uuid: uuid,
+                        category: 3 /* this.api.hap.Categories.FAN */,
+                        existingAccessory: this.accessories.find(accessory => accessory.UUID === uuid)
+                    });
+                }
+                else {
+                    this.log.info(`Skipping fan accessory registration for ${thermostatDevice.getDisplayName()} (Fan trait not supported).`);
+                }
             }
-        });
+        }
         // loop over the discovered devices and register each one if it has not already been registered
         for (const deviceInfo of deviceInfos) {
             if (deviceInfo.category === 1 /* this.api.hap.Categories.OTHER */)

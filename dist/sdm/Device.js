@@ -70,8 +70,8 @@ class Device {
         }
         catch (error) {
             this.log.error('Could not execute device command: ', error.stack ?? error, this.getDisplayName());
+            throw error;
         }
-        return undefined;
     }
 }
 exports.Device = Device;
