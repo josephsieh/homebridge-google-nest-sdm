@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [2.0.28] - 2026-10-09
+
+### Added
+- **Full Intra Request (FIR) Keyframe Generation:** Integrated upstream H.264 FIR (`RFC 5104`) payload feedback in `H264.ts`. Cameras answer FIR with in-band parameter sets (SPS/PPS), avoiding startup delays waiting for periodic keyframes.
+- **Configurable FFmpeg Probing:** Added `analyzeDuration` and `probeSize` configuration options with UI schema definitions. Added `-fpsprobesize 0` so FFmpeg returns as soon as codec parameters arrive rather than stalling while probing stream FPS.
+- **Upstream Sync Infrastructure & Divergence Ledger:** Created `FORK.md` ledger, automated `npm run sync:upstream` script, untracked `dist/` from Git, and enabled Git `rerere` to streamline future upstream updates.
+
+### Fixed
+- **HKSV Recording Lifecycle Hardening:** Integrated upstream fixes tearing down prior recording sessions before allocating new ones, guarding `closeRecordingStream` against stale session IDs, and closing listening sockets on disconnect/destroy to prevent orphaned FFmpeg processes and descriptor leaks.
+- **Stale Event & Relation Update Safety:** Filtered out replayed Pub/Sub events older than 30 seconds to prevent phantom notifications, guarded against relation updates missing `resourceUpdate`, and prevented duplicate stale log messages on doorbell events.
+- **Rate Limit & Error Handling:** Added safe detection and informative error messages for Google HTTP 429 / `RESOURCE_EXHAUSTED` errors without risking uncaught exceptions on circular error objects.
+- **WebRTC Stream Stability:** Restored removal of spurious `replaceTrack()` echo-back on receive-only transceivers and guarded against keyframe timer leaks.
+
+---
+## [2.0.27] - 2026-06-11
+
+### Fixed
+- **Trait Refresh Cache:** Introduced a 30-second coalesced refresh cache in `Device.ts` to reduce status synchronization lag and prevent excessive API calls.
+
+---
+## [2.0.26] - 2026-06-11
+
+### Fixed
+- **Thermostat Fan Control:** Improved thermostat fan control, validated duration values, synchronized initial state, and properly propagated command errors.
+
+---
 ## [2.0.25] - 2026-06-11
 
 ### Fixed
