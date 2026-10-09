@@ -49,6 +49,7 @@ const Traits = __importStar(require("./Traits"));
 let cachedNestLogo = null;
 let cachedGoogleLogo = null;
 class Camera extends Device_1.Device {
+    static MAX_EVENT_AGE_SECONDS = 30;
     image = null;
     imageTimeout = null;
     getDisplayName() {
@@ -115,7 +116,7 @@ class Camera extends Device_1.Device {
     }
     async getEventImage(eventId, date) {
         const dateDiff = (Date.now() - date.getTime()) / 1000;
-        if (dateDiff > 30) {
+        if (dateDiff > Camera.MAX_EVENT_AGE_SECONDS) {
             this.log.debug(`Camera event image is too old (${dateDiff} sec), ignoring.`, this.getDisplayName());
             return;
         }
@@ -180,8 +181,25 @@ class Camera extends Device_1.Device {
             });
         }
     }
+    isEventStale(event) {
+        const ageSeconds = (Date.now() - new Date(event.timestamp).getTime()) / 1000;
+        // Both a missing timestamp and an unparseable one land here: new Date(undefined)
+        // and new Date('nonsense') each yield NaN from getTime(). Fail OPEN in that case
+        // — treat the event as fresh and let it through. A malformed or absent timestamp
+        // must never be able to silently swallow real motion or a doorbell ring; the cost
+        // of being wrong that way is a missed alert, versus a duplicate one the other way.
+        if (Number.isNaN(ageSeconds))
+            return false;
+        if (ageSeconds > Camera.MAX_EVENT_AGE_SECONDS) {
+            this.log.debug(`Camera event is too old (${ageSeconds} sec), ignoring.`, this.getDisplayName());
+            return true;
+        }
+        return false;
+    }
     event(event) {
         super.event(event);
+        if (this.isEventStale(event))
+            return;
         lodash_1.default.forEach(event.resourceUpdate.events, (value, key) => {
             switch (key) {
                 case Events.Constants.CameraMotion:

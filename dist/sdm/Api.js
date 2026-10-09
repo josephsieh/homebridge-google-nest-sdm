@@ -95,13 +95,24 @@ class SmartDeviceManagement {
             this.log.debug('Event received: ' + message.data.toString());
             try {
                 const event = JSON.parse(message.data.toString());
-                if (event.resourceUpdate.events) {
+                // Relation updates (a device added to, removed from, or moved
+                // between structures/rooms) carry a relationUpdate and NO
+                // resourceUpdate. Reading resourceUpdate.events on one of those
+                // throws, so bail before the trait/event dispatch below.
+                const resourceUpdate = event.resourceUpdate;
+                if (!resourceUpdate) {
+                    this.log.debug(event.relationUpdate
+                        ? 'Ignoring relation update event.'
+                        : 'Ignoring event with no resourceUpdate.');
+                    return;
+                }
+                if (resourceUpdate.events) {
                     const resourceEventEvent = event;
                     const device = lodash_1.default.find(this.devices, device => device.getName() === resourceEventEvent.resourceUpdate.name);
                     if (device)
                         device.event(resourceEventEvent);
                 }
-                else if (event.resourceUpdate.traits) {
+                else if (resourceUpdate.traits) {
                     const resourceTraitEvent = event;
                     const device = lodash_1.default.find(this.devices, device => device.getName() === resourceTraitEvent.resourceUpdate.name);
                     if (device)

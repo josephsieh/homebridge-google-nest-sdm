@@ -49,6 +49,8 @@ class Doorbell extends Camera_1.Camera {
     onRing;
     event(event) {
         super.event(event);
+        if (this.isEventStale(event))
+            return;
         lodash_1.default.forEach(event.resourceUpdate.events, (value, key) => {
             switch (key) {
                 case Events.Constants.DoorbellChime:

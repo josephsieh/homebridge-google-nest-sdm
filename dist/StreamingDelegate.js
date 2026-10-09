@@ -214,7 +214,7 @@ class StreamingDelegate {
         const bitrate = request.video.max_bit_rate * 4;
         const vEncoder = this.config.vEncoder || 'libx264 -preset ultrafast -tune zerolatency';
         this.log.debug(`Video stream requested: ${request.video.width} x ${request.video.height}, ${request.video.fps} fps, ${request.video.max_bit_rate} kbps`, this.camera.getDisplayName());
-        const nestStreamer = await (0, NestStreamer_1.getStreamer)(this.log, this.camera);
+        const nestStreamer = await (0, NestStreamer_1.getStreamer)(this.log, this.camera, this.config);
         let ffmpegArgs;
         let nestStream;
         try {
@@ -344,9 +344,17 @@ class StreamingDelegate {
         this.log.debug('Stopped video stream.', this.camera.getDisplayName());
     }
     closeRecordingStream(streamId, reason) {
+        // Only tear down if this close targets the session we're actually running. A HomeKit hub can
+        // send a late close for an already-replaced (orphaned) session; without this guard that stale
+        // close would destroy the *current* recording.
+        if (this.recordingSessionInfo && this.recordingSessionInfo.streamId !== streamId) {
+            this.log.debug(`Ignoring recording close for a stale/replaced session id ${streamId}.`, this.camera.getDisplayName());
+            return;
+        }
         if (this.recordingSessionInfo?.hksvStreamer) {
             this.recordingSessionInfo?.hksvStreamer.destroy();
-            this.recordingSessionInfo.nestStreamer.teardown();
+            // teardown() is async; an unhandled rejection here would restart the bridge on Node >= 15.
+            Promise.resolve(this.recordingSessionInfo.nestStreamer.teardown()).catch(e => this.log.error('Error tearing down recording SDM stream: ' + e, this.camera.getDisplayName()));
             this.recordingSessionInfo = undefined;
         }
         this.handlingRecordingStreamingRequest = false;
@@ -430,10 +438,20 @@ class StreamingDelegate {
                 "-ac", `${this.cameraRecordingConfiguration.audioCodec.audioChannels}`,
             ]
             : [];
-        const nestStreamer = await (0, NestStreamer_1.getStreamer)(this.log, this.camera);
+        const nestStreamer = await (0, NestStreamer_1.getStreamer)(this.log, this.camera, this.config);
         const nestStream = await nestStreamer.initialize();
         const hksvStreamer = new HksvStreamer_1.default(this.log, nestStream, audioArgs, videoArgs, this.platform.debugMode);
+        // Tear down any prior recording session before overwriting it. A HomeKit hub
+        // can start a new recording (e.g. after a brief reconnect) before the previous
+        // session's close event fires. Without this, the previous HksvStreamer — and
+        // its ffmpeg child process — is orphaned and never cleaned up, accumulating
+        // memory over time. See #150.
+        if (this.recordingSessionInfo) {
+            this.recordingSessionInfo.hksvStreamer.destroy();
+            Promise.resolve(this.recordingSessionInfo.nestStreamer.teardown()).catch(e => this.log.error('Error tearing down prior recording SDM stream: ' + e, this.camera.getDisplayName()));
+        }
         this.recordingSessionInfo = {
+            streamId: streamId,
             hksvStreamer: hksvStreamer,
             nestStreamer: nestStreamer
         };

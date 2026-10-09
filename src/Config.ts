@@ -8,5 +8,7 @@ export type Config = {
     vEncoder?: string,
     showFan?: boolean,
     fanDuration?: number,
-    localIp?: string
+    localIp?: string,
+    analyzeDuration?: number,
+    probeSize?: number
 }
