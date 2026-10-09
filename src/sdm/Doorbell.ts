@@ -14,7 +14,8 @@ export class Doorbell extends Camera {
 
     event(event: Events.ResourceEventEvent) {
         super.event(event);
-        if (this.isEventStale(event)) return;
+        // [fork] Already logged in Camera.event (super); check quietly to prevent duplicate log lines
+        if (this.isEventStale(event, false)) return;
 
         _.forEach(event.resourceUpdate.events, (value, key) => {
             switch (key) {

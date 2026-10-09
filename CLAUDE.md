@@ -5,13 +5,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-npm run build       # clean + tsc compile + copy static assets to dist/
-npm run clean       # remove dist/
+npm run build          # clean + tsc compile + copy static assets to dist/
+npm run clean          # remove dist/
+npm run sync:upstream  # fetch and merge changes from potmat/homebridge-google-nest-sdm
 ```
 
-There are no tests (`npm test` exits with an error). Node >= 18 required.
+There are no tests (`npm test` exits with an error). Node >= 22 required (Homebridge 2.x).
 
-TypeScript strict mode is on. Build output goes to `dist/`; `src/res/*.jpg` (snapshot placeholder images) are copied there by `copy-files`. Node >= 22 required (Homebridge 2.x).
+TypeScript strict mode is on. Build output goes to `dist/` (untracked in git, packed on publish); `src/res/*.jpg` (snapshot placeholder images) are copied there by `copy-files`. Node >= 22 required (Homebridge 2.x).
 
 ## Releases
 
@@ -62,3 +63,12 @@ This is a Homebridge dynamic platform plugin that bridges Google Nest devices to
 `config.schema.json` is the Homebridge UI config schema — keep it in sync with `Config.ts` when adding fields.
 
 **Debug mode:** pass `-D` or `--debug` to the `homebridge` CLI to enable verbose logging (`platform.debugMode`).
+
+### Fork Maintenance & Upstream Syncs
+
+This repository is a downstream fork of `potmat/homebridge-google-nest-sdm`.
+- Consult `FORK.md` for the divergence ledger explaining fork-specific behavior vs upstream.
+- Run `npm run sync:upstream` to pull and merge updates from `upstream/master`.
+- Do not reformat or reorder code in upstream-owned files.
+- Mark intentional fork deviations in upstream-owned code with `// [fork] <reason>`.
+- Keep fork-only logic in separate files (like `ThermostatUtils.ts`) where practical.

@@ -87,7 +87,15 @@ export abstract class Device {
             this.log.debug(`Execution of command ${name} returned ${JSON.stringify(response.data.results)}`, this.getDisplayName());
             return <U>response.data.results;
         } catch (error: any) {
-            const serializedError = JSON.stringify(error) || '';
+            // [fork] Safely inspect error without risking an uncaught circular JSON.stringify error
+            let serializedError = '';
+            try {
+                serializedError = JSON.stringify(error) || '';
+            } catch {
+                /* circular or non-serializable error */
+            }
+            serializedError += ' ' + (error?.message ?? '');
+
             const isRateLimited = error?.response?.status === 429
                 || error?.code === 429
                 || serializedError.includes('RESOURCE_EXHAUSTED')

@@ -1,3 +1,6 @@
+# Build output (compiled by tsc and published via prepublishOnly)
+dist/
+
 # Logs
 logs
 *.log

@@ -237,7 +237,7 @@ export class WebRtcNestStreamer extends NestStreamer {
 
         const audioTransceiver = this.pc.addTransceiver("audio", {direction: "recvonly"});
         audioTransceiver.onTrack.subscribe((track) => {
-            audioTransceiver.sender.replaceTrack(track);
+            // [fork] no sender.replaceTrack() echo-back on recvonly transceivers (v2.0.23)
             track.onReceiveRtp.subscribe(relayAudio);
         });
 
@@ -290,7 +290,7 @@ export class WebRtcNestStreamer extends NestStreamer {
             this.firstRembSent = false;
             this.firSeq = 0;
             this.mark('video track received');
-            videoTransceiver.sender.replaceTrack(track);
+            // [fork] no sender.replaceTrack() echo-back on recvonly transceivers (v2.0.23)
 
             this.sendRemb();
             track.onReceiveRtp.subscribe((rtp) => {
@@ -332,6 +332,10 @@ export class WebRtcNestStreamer extends NestStreamer {
                 // PLI/FIR timing: start on first received RTP packet (DTLS/SRTP confirmed up).
                 // Backoff: 2 s for the first 10 s, then 10 s — each PLI/FIR forces a full IDR
                 // and consumes a large fraction of the budget.
+                if (this.keyframeRequestInterval) {
+                    clearInterval(this.keyframeRequestInterval);
+                    this.keyframeRequestInterval = undefined;
+                }
                 let keyframeCount = 0;
                 const sendKeyframeWithBackoff = () => {
                     this.requestKeyframe();

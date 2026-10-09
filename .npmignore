@@ -8,3 +8,5 @@ CLAUDE.md
 *.tgz
 *.tsbuildinfo
 *.log
+FORK.md
+scripts/

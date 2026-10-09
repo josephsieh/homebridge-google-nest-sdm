@@ -156,7 +156,7 @@ export class Camera extends Device {
         }
     }
 
-    protected isEventStale(event: Events.Event): boolean {
+    protected isEventStale(event: Events.Event, log = true): boolean {
         const ageSeconds = (Date.now() - new Date(event.timestamp).getTime())/1000;
 
         // Both a missing timestamp and an unparseable one land here: new Date(undefined)
@@ -167,7 +167,9 @@ export class Camera extends Device {
         if (Number.isNaN(ageSeconds)) return false;
 
         if (ageSeconds > Camera.MAX_EVENT_AGE_SECONDS) {
-            this.log.debug(`Camera event is too old (${ageSeconds} sec), ignoring.`, this.getDisplayName());
+            if (log) {
+                this.log.debug(`Camera event is too old (${ageSeconds} sec), ignoring.`, this.getDisplayName());
+            }
             return true;
         }
 

@@ -3,11 +3,19 @@
   "version": "2.0.27",
   "description": "A homebridge plugin that uses the Google Smart Device Management API.",
   "main": "dist/index.js",
+  "files": [
+    "dist",
+    "config.schema.json",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
   "scripts": {
     "clean": "rimraf ./dist",
     "copy-files": "copyfiles -u 1 src/res/*.* dist/",
     "build": "npm run clean && tsc && npm run copy-files",
     "prepublishOnly": "npm run build",
+    "sync:upstream": "bash scripts/sync-upstream.sh",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "engines": {
